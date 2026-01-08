@@ -2,24 +2,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import authApi from '../api/auth.api';
 import { apiClient } from '../api/client';
 
-// User type
+// User type - Simplified to username only
 export interface User {
   _id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  preferences?: {
-    dietaryRestrictions?: string[];
-    allergens?: string[];
-    favoriteItems?: string[];
-    notifications?: {
-      email: boolean;
-      push: boolean;
-    };
-    language?: string;
-    theme?: 'light' | 'dark';
-  };
+  username: string;
+  restaurantId: string;
   createdAt: string;
 }
 
@@ -28,17 +15,9 @@ interface UserContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) => Promise<void>;
-  logout: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
-  refreshUser: () => Promise<void>;
+  login: (username: string) => Promise<void>;
+  register: (username: string) => Promise<void>;
+  logout: () => void;
 }
 
 // Create context
@@ -57,46 +36,33 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check if user is authenticated
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('userToken');
-      if (token) {
-        // Set auth header
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Fetch user data
-        const response = await authApi.getCurrentUser();
-        if (response.success) {
-          setUser(response.data);
-        } else {
-          // Token invalid, clear it
-          localStorage.removeItem('userToken');
-          delete apiClient.defaults.headers.common['Authorization'];
-        }
+      const cachedUser = localStorage.getItem('customer');
+      if (cachedUser) {
+        const userData = JSON.parse(cachedUser);
+        setUser(userData);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('userToken');
-      delete apiClient.defaults.headers.common['Authorization'];
+      localStorage.removeItem('customer');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Login
-  const login = async (email: string, password: string) => {
+  // Login with username only
+  const login = async (username: string) => {
     try {
-      const response = await authApi.login({ email, password });
+      const response = await authApi.login({ username });
 
       if (response.success) {
-        const { token, user: userData } = response.data;
+        const { customer } = response.data;
 
-        // Save token
-        localStorage.setItem('userToken', token);
+        // Save user data (no token needed)
+        localStorage.setItem('customer', JSON.stringify(customer));
+        localStorage.setItem('customerId', customer._id);
+        localStorage.setItem('customerUsername', customer.username);
 
-        // Set auth header
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Set user data
-        setUser(userData);
+        setUser(customer);
       } else {
         throw new Error(response.message || 'Login failed');
       }
@@ -106,28 +72,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Register
-  const register = async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) => {
+  // Register with username only
+  const register = async (username: string) => {
     try {
-      const response = await authApi.register(data);
+      const response = await authApi.register({ username });
 
       if (response.success) {
-        const { token, user: userData } = response.data;
+        const { customer } = response.data;
 
-        // Save token
-        localStorage.setItem('userToken', token);
+        // Save user data (no token needed)
+        localStorage.setItem('customer', JSON.stringify(customer));
+        localStorage.setItem('customerId', customer._id);
+        localStorage.setItem('customerUsername', customer.username);
 
-        // Set auth header
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Set user data
-        setUser(userData);
+        setUser(customer);
       } else {
         throw new Error(response.message || 'Registration failed');
       }
@@ -138,45 +96,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Logout
-  const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Clear token and user data
-      localStorage.removeItem('userToken');
-      delete apiClient.defaults.headers.common['Authorization'];
-      setUser(null);
-    }
-  };
-
-  // Update profile
-  const updateProfile = async (data: Partial<User>) => {
-    try {
-      const response = await authApi.updateProfile(data);
-
-      if (response.success) {
-        setUser(response.data);
-      } else {
-        throw new Error(response.message || 'Profile update failed');
-      }
-    } catch (error: any) {
-      console.error('Profile update error:', error);
-      throw error;
-    }
-  };
-
-  // Refresh user data
-  const refreshUser = async () => {
-    try {
-      const response = await authApi.getCurrentUser();
-      if (response.success) {
-        setUser(response.data);
-      }
-    } catch (error) {
-      console.error('Refresh user error:', error);
-    }
+  const logout = () => {
+    localStorage.removeItem('customer');
+    localStorage.removeItem('customerId');
+    localStorage.removeItem('customerUsername');
+    setUser(null);
   };
 
   const value: UserContextType = {
@@ -186,8 +110,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     register,
     logout,
-    updateProfile,
-    refreshUser,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

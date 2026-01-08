@@ -16,13 +16,28 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
 
   const formatPrice = (price: number) => `$${price.toFixed(2)}`;
 
+  // Get image URL handling both old and new formats
+  const getImageUrl = (item: MenuItemType): string | null => {
+    const imagePath = item.images?.original || item.image;
+    if (!imagePath) return null;
+
+    // If already a full URL, use as-is
+    if (imagePath.startsWith('http')) return imagePath;
+
+    // Otherwise, prepend backend URL
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}${imagePath}`;
+  };
+
+  const imageUrl = getImageUrl(item);
+
   return (
     <Card hover onClick={item.isAvailable ? onClick : undefined} className="overflow-hidden">
       {/* Image Section */}
       <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200">
-        {item.image ? (
+        {imageUrl ? (
           <img
-            src={item.image}
+            src={imageUrl}
             alt={item.name}
             className="w-full h-full object-cover"
           />

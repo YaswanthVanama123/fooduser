@@ -105,7 +105,13 @@ const Menu: React.FC = () => {
 
     // Filter by category
     if (selectedCategory) {
-      filtered = filtered.filter((item) => item.categoryId === selectedCategory);
+      filtered = filtered.filter((item) => {
+        // Handle both populated (object) and non-populated (string) categoryId
+        const categoryId = typeof item.categoryId === 'object' && item.categoryId?._id
+          ? item.categoryId._id
+          : item.categoryId;
+        return categoryId === selectedCategory;
+      });
     }
 
     // Filter by search query
@@ -485,13 +491,28 @@ const ItemModal: React.FC<ItemModalProps> = ({
   const itemPrice = calculatePrice();
   const totalPrice = itemPrice * quantity;
 
+  // Get image URL handling both old and new formats
+  const getImageUrl = (item: MenuItemType): string | null => {
+    const imagePath = item.images?.original || item.image;
+    if (!imagePath) return null;
+
+    // If already a full URL, use as-is
+    if (imagePath.startsWith('http')) return imagePath;
+
+    // Otherwise, prepend backend URL
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}${imagePath}`;
+  };
+
+  const imageUrl = getImageUrl(item);
+
   return (
     <Modal isOpen={true} onClose={onClose} title={item.name} size="lg">
       <ModalBody>
         {/* Image */}
-        {item.image && (
+        {imageUrl && (
           <div className="relative h-64 -mt-6 -mx-6 mb-6 rounded-t-2xl overflow-hidden">
-            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={item.name} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
             {/* Dietary Badges on Image */}

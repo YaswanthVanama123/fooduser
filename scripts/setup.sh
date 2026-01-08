@@ -1,114 +1,113 @@
-#!/bin/bash
+#\!/usr/bin/env bash
 
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# User App Setup Script
+# This script sets up the user/customer application
+# Compatible with Windows Git Bash, Linux, and macOS
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+set -e
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_header() {
-    echo ""
-    echo -e "${BLUE}========================================${NC}"
-    echo -e "${BLUE}$1${NC}"
-    echo -e "${BLUE}========================================${NC}"
-    echo ""
-}
-
-# Get the script directory
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Change to project directory
-cd "$PROJECT_DIR" || exit 1
-
-print_header "User App Setup Script"
-
-# Step 1: Check if Node.js is installed
-print_status "Checking Node.js installation..."
-if ! command -v node &> /dev/null; then
-    print_error "Node.js is not installed. Please install Node.js first."
-    exit 1
-fi
-NODE_VERSION=$(node -v)
-print_success "Node.js $NODE_VERSION found"
-
-# Step 2: Check if npm is installed
-print_status "Checking npm installation..."
-if ! command -v npm &> /dev/null; then
-    print_error "npm is not installed. Please install npm first."
-    exit 1
-fi
-NPM_VERSION=$(npm -v)
-print_success "npm $NPM_VERSION found"
-
-# Step 3: Install dependencies
-print_header "Installing Dependencies"
-print_status "Running npm install..."
-if npm install; then
-    print_success "Dependencies installed successfully"
+# Detect OS
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    IS_WINDOWS=true
 else
-    print_error "Failed to install dependencies"
+    IS_WINDOWS=false
+fi
+
+# Colors for output (compatible with Git Bash)
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    NC=''
+fi
+
+echo -e "${GREEN}================================${NC}"
+echo -e "${GREEN}User App Setup${NC}"
+echo -e "${GREEN}================================${NC}"
+echo ""
+
+# Check if Node.js is installed
+if \! command -v node &> /dev/null; then
+    echo -e "${RED}Error: Node.js is not installed${NC}"
+    echo "Please install Node.js from https://nodejs.org/"
     exit 1
 fi
 
-# Step 4: Setup environment file
-print_header "Setting Up Environment"
-if [ -f ".env" ]; then
-    print_warning ".env file already exists, skipping..."
+echo -e "${GREEN}✓${NC} Node.js is installed: $(node --version)"
+
+# Check if npm is installed
+if \! command -v npm &> /dev/null; then
+    echo -e "${RED}Error: npm is not installed${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} npm is installed: $(npm --version)"
+echo ""
+
+# Install dependencies
+echo -e "${YELLOW}Installing dependencies...${NC}"
+if $IS_WINDOWS; then
+    npm install --no-optional 2>&1 | tee npm-install.log
 else
-    if [ -f ".env.example" ]; then
-        print_status "Copying .env.example to .env..."
-        cp .env.example .env
-        print_success ".env file created"
-        print_warning "Please update .env file with your configuration"
+    npm install
+fi
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓${NC} Dependencies installed successfully"
+    [ -f npm-install.log ] && rm -f npm-install.log
+else
+    echo -e "${RED}✗${NC} Failed to install dependencies"
+    [ -f npm-install.log ] && echo "See npm-install.log for details"
+    exit 1
+fi
+
+echo ""
+
+# Copy .env.example to .env if it doesn't exist
+if [ \! -f .env ]; then
+    echo -e "${YELLOW}Creating .env file...${NC}"
+    if $IS_WINDOWS; then
+        cp .env.example .env 2>/dev/null || cat .env.example > .env
     else
-        print_error ".env.example not found"
-        exit 1
+        cp .env.example .env
     fi
+    echo -e "${GREEN}✓${NC} .env file created from .env.example"
+    echo -e "${YELLOW}Note: Please update .env with your configuration${NC}"
+else
+    echo -e "${YELLOW}ℹ${NC} .env file already exists, skipping..."
 fi
 
-# Step 5: Run build check
-print_header "Running Build Check"
-print_status "Building project..."
-if npm run build; then
-    print_success "Build completed successfully"
+echo ""
+
+# Run build check
+echo -e "${YELLOW}Running build check...${NC}"
+npm run build 2>&1 | tail -20
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓${NC} Build successful"
 else
-    print_error "Build failed"
+    echo -e "${RED}✗${NC} Build failed"
+    echo -e "${YELLOW}Tip: Check for TypeScript errors above${NC}"
     exit 1
 fi
 
-# Success message
-print_header "Setup Complete!"
 echo ""
-echo -e "${GREEN}User App has been set up successfully!${NC}"
+echo -e "${GREEN}================================${NC}"
+echo -e "${GREEN}Setup Complete\!${NC}"
+echo -e "${GREEN}================================${NC}"
 echo ""
-echo -e "${BLUE}Next steps:${NC}"
-echo -e "  1. Update the ${YELLOW}.env${NC} file with your configuration"
-echo -e "  2. Make sure the backend server is running"
-echo -e "  3. Start the development server: ${YELLOW}npm run dev${NC}"
+echo -e "You can now run the development server with:"
+echo -e "${YELLOW}npm run dev${NC}"
 echo ""
-echo -e "${BLUE}Available commands:${NC}"
-echo -e "  ${YELLOW}npm run dev${NC}      - Start development server"
-echo -e "  ${YELLOW}npm run build${NC}    - Build for production"
-echo -e "  ${YELLOW}npm run preview${NC}  - Preview production build"
+echo -e "The user app will be available at:"
+echo -e "${BLUE}http://localhost:5173${NC}"
 echo ""
-echo -e "${GREEN}Happy coding!${NC}"
+echo -e "${GREEN}Happy coding\!${NC}"
 echo ""

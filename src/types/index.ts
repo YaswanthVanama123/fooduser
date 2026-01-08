@@ -22,9 +22,15 @@ export interface MenuItem {
   _id: string;
   name: string;
   description?: string;
-  categoryId: string;
+  categoryId: string | { _id: string; name: string }; // Can be populated by backend
   price: number;
   image?: string;
+  images?: { // New images structure from backend
+    original?: string;
+    large?: string | null;
+    medium?: string | null;
+    small?: string | null;
+  };
   isAvailable: boolean;
   isVegetarian: boolean;
   isVegan: boolean;

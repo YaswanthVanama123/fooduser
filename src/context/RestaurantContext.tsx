@@ -54,8 +54,20 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Fetch restaurant info using centralized API service
       const response = await restaurantApi.getInfo();
 
-      if (response.success) {
-        const restaurantData = response.data;
+      if (response.success && response.data) {
+        // Map the public API response to Restaurant format
+        const restaurantData: Restaurant = {
+          _id: response.data.restaurantId,
+          subdomain: response.data.subdomain,
+          name: response.data.name,
+          branding: response.data.branding || {
+            primaryColor: '#6366f1',
+            secondaryColor: '#8b5cf6',
+            theme: 'light',
+          },
+          isActive: true,
+        };
+
         setRestaurant(restaurantData);
         applyBranding(restaurantData.branding);
 

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, Heart, History } from 'lucide-react';
+import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
+import SimpleAuthModal from './SimpleAuthModal';
 import Badge from './ui/Badge';
 
 const Header: React.FC = () => {
@@ -11,8 +12,9 @@ const Header: React.FC = () => {
   const location = useLocation();
   const { cart, tableNumber } = useCart();
   const { restaurant } = useRestaurant();
-  const { user, isAuthenticated, logout } = useUser();
+  const { user, isAuthenticated, login, register, logout } = useUser();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -40,21 +42,16 @@ const Header: React.FC = () => {
     };
   }, [showDropdown]);
 
-  // Get user initials
+  // Get user initials from username
   const getUserInitials = () => {
-    if (!user) return '';
-    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    if (!user || !user.username) return 'U';
+    return user.username.substring(0, 2).toUpperCase();
   };
 
   // Handle logout
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setShowDropdown(false);
-      navigate('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const handleLogout = () => {
+    logout();
+    setShowDropdown(false);
   };
 
   // Handle dropdown menu item click
@@ -157,49 +154,23 @@ const Header: React.FC = () => {
                     {getUserInitials()}
                   </div>
                   <span className="hidden md:inline-block text-white font-medium max-w-[120px] truncate">
-                    {user.firstName}
+                    {user.username}
                   </span>
                 </button>
 
                 {/* Dropdown Menu */}
                 {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-5 duration-200">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-5 duration-200">
                     {/* User Info Header */}
                     <div className="px-4 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
-                        {user.firstName} {user.lastName}
+                        {user.username}
                       </p>
-                      <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                      <p className="text-xs text-gray-600">Customer</p>
                     </div>
 
                     {/* Menu Items */}
                     <div className="py-2">
-                      <button
-                        onClick={() => handleMenuClick('/profile')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <User className="h-5 w-5 text-gray-600" />
-                        <span className="text-sm font-medium text-gray-700">Profile</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleMenuClick('/order-history')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <History className="h-5 w-5 text-gray-600" />
-                        <span className="text-sm font-medium text-gray-700">Order History</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleMenuClick('/favorites')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <Heart className="h-5 w-5 text-gray-600" />
-                        <span className="text-sm font-medium text-gray-700">Favorites</span>
-                      </button>
-
-                      <div className="border-t border-gray-100 my-2"></div>
-
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 transition-colors text-left"
@@ -213,7 +184,7 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => setShowAuthModal(true)}
                 className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium"
               >
                 <User className="h-5 w-5" />
@@ -233,6 +204,14 @@ const Header: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Simple Auth Modal */}
+      <SimpleAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onLogin={login}
+        onRegister={register}
+      />
     </header>
   );
 };
