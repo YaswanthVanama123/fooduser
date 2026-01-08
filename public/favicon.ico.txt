@@ -1,0 +1,17 @@
+# FAVICON.ICO PLACEHOLDER
+
+This is a placeholder file. You need to create an actual favicon.ico file.
+
+Please see favicon-instructions.txt in this directory for detailed instructions on how to create your favicon.
+
+Quick Start:
+1. Visit https://favicon.io/ or https://realfavicongenerator.net/
+2. Upload your logo or create a new icon
+3. Download the generated favicon.ico
+4. Replace this file with the downloaded favicon.ico
+
+The favicon should be:
+- 32x32 pixels or multi-size (16x16, 32x32, 48x48)
+- ICO format
+- Simple design (small details won't be visible)
+- Match your brand colors (PatLinks theme: #10B981 green)

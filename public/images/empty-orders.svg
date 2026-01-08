@@ -1,0 +1,35 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Empty orders illustration -->
+  <g id="empty-orders">
+    <!-- Clipboard/receipt -->
+    <rect x="120" y="50" width="160" height="180" rx="8" stroke="#D1D5DB" stroke-width="3" fill="none"/>
+
+    <!-- Clipboard clip -->
+    <rect x="170" y="40" width="60" height="20" rx="4" fill="#E5E7EB"/>
+    <rect x="180" y="45" width="40" height="10" rx="2" fill="#F3F4F6"/>
+
+    <!-- Empty list lines -->
+    <line x1="145" y1="90" x2="255" y2="90" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+    <line x1="145" y1="115" x2="240" y2="115" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+    <line x1="145" y1="140" x2="255" y2="140" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+    <line x1="145" y1="165" x2="230" y2="165" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+    <line x1="145" y1="190" x2="245" y2="190" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Checkboxes (empty) -->
+    <rect x="145" y="83" width="14" height="14" rx="2" stroke="#E5E7EB" stroke-width="2" fill="none"/>
+    <rect x="145" y="108" width="14" height="14" rx="2" stroke="#E5E7EB" stroke-width="2" fill="none"/>
+    <rect x="145" y="133" width="14" height="14" rx="2" stroke="#E5E7EB" stroke-width="2" fill="none"/>
+    <rect x="145" y="158" width="14" height="14" rx="2" stroke="#E5E7EB" stroke-width="2" fill="none"/>
+    <rect x="145" y="183" width="14" height="14" rx="2" stroke="#E5E7EB" stroke-width="2" fill="none"/>
+
+    <!-- Decorative dots -->
+    <circle cx="110" cy="120" r="3" fill="#E5E7EB" opacity="0.5"/>
+    <circle cx="290" cy="140" r="2.5" fill="#E5E7EB" opacity="0.5"/>
+    <circle cx="105" cy="180" r="2" fill="#E5E7EB" opacity="0.5"/>
+    <circle cx="295" cy="100" r="2" fill="#E5E7EB" opacity="0.5"/>
+  </g>
+
+  <!-- Text -->
+  <text x="200" y="260" font-family="Arial, sans-serif" font-size="18" fill="#9CA3AF" text-anchor="middle" font-weight="500">No orders yet</text>
+  <text x="200" y="285" font-family="Arial, sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">Your order history will appear here</text>
+</svg>

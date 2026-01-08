@@ -1,0 +1,27 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Empty cart illustration -->
+  <g id="empty-cart">
+    <!-- Cart body -->
+    <path d="M120 80L140 180H300L320 80H120Z" stroke="#D1D5DB" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Cart handle -->
+    <path d="M140 80L130 50H90" stroke="#D1D5DB" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Cart wheels -->
+    <circle cx="170" cy="200" r="15" stroke="#D1D5DB" stroke-width="3" fill="none"/>
+    <circle cx="270" cy="200" r="15" stroke="#D1D5DB" stroke-width="3" fill="none"/>
+
+    <!-- Empty lines inside cart -->
+    <line x1="160" y1="120" x2="280" y2="120" stroke="#E5E7EB" stroke-width="2" stroke-linecap="round"/>
+    <line x1="165" y1="145" x2="275" y2="145" stroke="#E5E7EB" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Floating elements to show emptiness -->
+    <circle cx="220" cy="130" r="3" fill="#E5E7EB" opacity="0.5"/>
+    <circle cx="250" cy="150" r="2" fill="#E5E7EB" opacity="0.5"/>
+    <circle cx="190" cy="155" r="2.5" fill="#E5E7EB" opacity="0.5"/>
+  </g>
+
+  <!-- Text -->
+  <text x="200" y="250" font-family="Arial, sans-serif" font-size="18" fill="#9CA3AF" text-anchor="middle" font-weight="500">Your cart is empty</text>
+  <text x="200" y="275" font-family="Arial, sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">Add items to get started</text>
+</svg>

@@ -1,0 +1,13 @@
+# https://www.robotstxt.org/robotstxt.html
+# Allow all crawlers to access all content
+
+User-agent: *
+Allow: /
+
+# Disallow sensitive or unnecessary pages
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*.json$
+
+# Sitemap location (update with your actual sitemap URL when available)
+Sitemap: https://patlinks.com/sitemap.xml

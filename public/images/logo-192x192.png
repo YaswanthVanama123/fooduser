@@ -1,0 +1,20 @@
+<!-- This is a placeholder file. Replace with actual PNG image -->
+<!--
+To create this PWA icon:
+1. Design your app logo in Figma, Canva, or Adobe Illustrator
+2. Export as 192x192px PNG with transparency
+3. Use online PWA icon generator: https://www.pwabuilder.com/imageGenerator
+4. Ensure the icon follows PWA guidelines:
+   - Safe zone: Keep important content within central 80% of the icon
+   - Padding: 10-20% padding around the actual logo
+   - Background: Can be transparent or solid color (#10B981 recommended)
+
+Tools to create icons:
+- Figma: https://www.figma.com/
+- Canva: https://www.canva.com/
+- Icon Kitchen: https://icon.kitchen/
+- PWA Asset Generator: https://github.com/onderceylan/pwa-asset-generator
+
+Dimensions: 192x192px
+Format: PNG with transparency support
+-->
