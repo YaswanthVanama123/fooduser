@@ -16,6 +16,7 @@ import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import BackButton from '../components/ui/BackButton';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import { useUser } from '../context/UserContext';
@@ -252,6 +253,11 @@ const OrderHistory: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-4">
+          <BackButton to="/menu" label="Back to Menu" />
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div

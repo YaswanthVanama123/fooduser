@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, Package, CreditCard, FileText, Lock, Lightbulb } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Package, CreditCard, FileText, Lock, Lightbulb } from 'lucide-react';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
+import BackButton from '../components/ui/BackButton';
 import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import TextArea from '../components/ui/TextArea';
@@ -26,6 +27,7 @@ const Cart: React.FC = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showClearCartModal, setShowClearCartModal] = useState(false);
+  const [showConfirmOrderModal, setShowConfirmOrderModal] = useState(false);
 
   const { subtotal, tax, total } = getCartTotal();
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
@@ -37,7 +39,7 @@ const Cart: React.FC = () => {
     setShowClearCartModal(false);
   };
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrderClick = () => {
     if (cart.length === 0) {
       toast.error('Your cart is empty');
       return;
@@ -58,6 +60,13 @@ const Cart: React.FC = () => {
       setShowAuthModal(true);
       return;
     }
+
+    // Show confirmation modal
+    setShowConfirmOrderModal(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    setShowConfirmOrderModal(false);
 
     try {
       setIsPlacingOrder(true);
@@ -168,13 +177,9 @@ const Cart: React.FC = () => {
         <Breadcrumbs className="mb-6" />
 
         {/* Back Button */}
-        <button
-          onClick={() => navigate('/menu')}
-          className="flex items-center text-gray-700 hover:text-gray-900 mb-6 transition-colors group"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Continue Shopping</span>
-        </button>
+        <div className="mb-6">
+          <BackButton to="/menu" label="Continue Shopping" />
+        </div>
 
         {/* Page Header */}
         <div className="mb-8">
@@ -398,7 +403,7 @@ const Cart: React.FC = () => {
                     variant="primary"
                     size="lg"
                     fullWidth
-                    onClick={handlePlaceOrder}
+                    onClick={handlePlaceOrderClick}
                     isLoading={isPlacingOrder}
                     style={{
                       background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
@@ -462,6 +467,18 @@ const Cart: React.FC = () => {
         confirmText="Clear Cart"
         cancelText="Cancel"
         variant="danger"
+      />
+
+      {/* Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showConfirmOrderModal}
+        onClose={() => setShowConfirmOrderModal(false)}
+        onConfirm={handleConfirmOrder}
+        title="Confirm Your Order"
+        message={`You are about to place an order with ${cart.reduce((sum, item) => sum + item.quantity, 0)} item(s) for a total of $${total.toFixed(2)}. Your order will be sent to the kitchen immediately.`}
+        confirmText="Place Order"
+        cancelText="Review Cart"
+        variant="primary"
       />
     </div>
   );

@@ -24,6 +24,7 @@ export interface MenuItem {
   description?: string;
   categoryId: string | { _id: string; name: string }; // Can be populated by backend
   price: number;
+  originalPrice?: number;
   image?: string;
   images?: { // New images structure from backend
     original?: string;
@@ -35,6 +36,7 @@ export interface MenuItem {
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
+  isNonVeg?: boolean;
   customizationOptions?: Customization[];
   preparationTime?: number;
   averageRating?: number;

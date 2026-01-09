@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Search, X, Plus, Minus, ShoppingBag, Clock } from 'lucide-react';
+import { Search, X, Plus, Minus, ShoppingBag, Clock, Filter, ChevronDown, Heart } from 'lucide-react';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
@@ -17,24 +17,45 @@ import Card, { CardBody } from '../components/ui/Card';
 import { MenuGridSkeleton } from '../components/ui/Skeleton';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
+import { useUser } from '../context/UserContext';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { menuApi } from '../api';
+import favoritesApi from '../api/favorites.api';
 import { MenuItem as MenuItemType, Category, CartItem, Customization } from '../types';
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { tableId, addToCart, cart, updateQuantity: updateCartQuantity, removeFromCart } = useCart();
   const { restaurant } = useRestaurant();
+  const { isAuthenticated } = useUser();
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
   const [filteredItems, setFilteredItems] = useState<MenuItemType[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
+
+  // Get state from URL parameters
+  const selectedCategory = searchParams.get('category');
+  const searchQuery = searchParams.get('search') || '';
+  const itemIdFromUrl = searchParams.get('item');
+
+  // Favorites state
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [isFavoritesLoading, setIsFavoritesLoading] = useState(false);
+
+  // Dietary type filter state - Initialize from URL
+  const [dietaryFilters, setDietaryFilters] = useState(() => ({
+    vegetarian: searchParams.get('vegetarian') === 'true',
+    vegan: searchParams.get('vegan') === 'true',
+    glutenFree: searchParams.get('glutenFree') === 'true',
+    nonVeg: searchParams.get('nonVeg') === 'true',
+  }));
+  const [showDietaryFilter, setShowDietaryFilter] = useState(false);
 
   // Item Modal State
   const [selectedItem, setSelectedItem] = useState<MenuItemType | null>(null);
@@ -61,6 +82,19 @@ const Menu: React.FC = () => {
       });
     }
 
+    // Filter by dietary type
+    const hasActiveFilters = Object.values(dietaryFilters).some(value => value);
+    if (hasActiveFilters) {
+      filtered = filtered.filter((item) => {
+        // If any filter is active, item must match at least one active filter
+        if (dietaryFilters.vegetarian && item.isVegetarian) return true;
+        if (dietaryFilters.vegan && item.isVegan) return true;
+        if (dietaryFilters.glutenFree && item.isGlutenFree) return true;
+        if (dietaryFilters.nonVeg && item.isNonVeg) return true;
+        return false;
+      });
+    }
+
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -72,7 +106,7 @@ const Menu: React.FC = () => {
     }
 
     setFilteredItems(filtered);
-  }, [menuItems, selectedCategory, searchQuery]);
+  }, [menuItems, selectedCategory, searchQuery, dietaryFilters]);
 
   // Memoized fetch function to prevent duplicate API calls
   const fetchData = useCallback(async () => {
@@ -100,6 +134,65 @@ const Menu: React.FC = () => {
     }
   }, []); // Empty deps - function doesn't depend on external values
 
+  // Fetch favorites if user is authenticated
+  const fetchFavorites = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setIsFavoritesLoading(true);
+      const response = await favoritesApi.getFavorites();
+
+      if (response.success) {
+        // Backend returns menu items directly, extract their IDs
+        const ids = response.data
+          .filter((item: any) => item && item._id)
+          .map((item: any) => item._id);
+        setFavoriteIds(new Set(ids));
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch favorites:', error);
+      // Don't show error toast - favorites are optional
+    } finally {
+      setIsFavoritesLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  // Toggle favorite status for an item
+  const handleToggleFavorite = async (itemId: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please login to add favorites');
+      navigate('/login?redirect=/menu');
+      return;
+    }
+
+    const isFavorite = favoriteIds.has(itemId);
+
+    try {
+      if (isFavorite) {
+        // Remove from favorites
+        await favoritesApi.removeFavorite(itemId);
+        setFavoriteIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemId);
+          return newSet;
+        });
+        toast.success('Removed from favorites', {
+          icon: <Heart className="h-5 w-5 text-gray-400" />,
+        });
+      } else {
+        // Add to favorites
+        await favoritesApi.addFavorite(itemId);
+        setFavoriteIds((prev) => new Set(prev).add(itemId));
+        toast.success('Added to favorites', {
+          icon: <Heart className="h-5 w-5 text-red-500 fill-current" />,
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle favorite:', error);
+      toast.error('Failed to update favorites');
+    }
+  };
+
   useEffect(() => {
     // Redirect to table selection if no table selected
     if (!tableId) {
@@ -111,8 +204,50 @@ const Menu: React.FC = () => {
   }, [tableId, navigate, fetchData]);
 
   useEffect(() => {
+    // Fetch favorites when authenticated
+    if (isAuthenticated) {
+      fetchFavorites();
+    }
+  }, [isAuthenticated, fetchFavorites]);
+
+  useEffect(() => {
     filterItems();
   }, [filterItems]);
+
+  // Effect to open modal from URL parameter
+  useEffect(() => {
+    if (itemIdFromUrl && menuItems.length > 0 && !selectedItem) {
+      const item = menuItems.find((item) => item._id === itemIdFromUrl);
+      if (item) {
+        setSelectedItem(item);
+        setCustomizations({});
+        setQuantity(1);
+        setSpecialInstructions('');
+      }
+    }
+  }, [itemIdFromUrl, menuItems, selectedItem]);
+
+  // Effect to sync dietary filters with URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    let hasChanges = false;
+
+    // Update dietary filter params
+    Object.entries(dietaryFilters).forEach(([key, value]) => {
+      const currentValue = params.get(key) === 'true';
+      if (value && !currentValue) {
+        params.set(key, 'true');
+        hasChanges = true;
+      } else if (!value && currentValue) {
+        params.delete(key);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [dietaryFilters]);
 
   useEffect(() => {
     // Close search history dropdown when clicking outside
@@ -191,6 +326,11 @@ const Menu: React.FC = () => {
       return;
     }
 
+    // Update URL with item ID
+    const params = new URLSearchParams(searchParams);
+    params.set('item', item._id);
+    setSearchParams(params);
+
     setSelectedItem(item);
     setCustomizations({});
     setQuantity(1);
@@ -198,6 +338,11 @@ const Menu: React.FC = () => {
   };
 
   const handleCloseModal = () => {
+    // Remove item ID from URL
+    const params = new URLSearchParams(searchParams);
+    params.delete('item');
+    setSearchParams(params);
+
     setSelectedItem(null);
     setCustomizations({});
     setQuantity(1);
@@ -302,16 +447,42 @@ const Menu: React.FC = () => {
   };
 
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    if (!value.trim()) {
+    const params = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
       setShowSearchHistory(false);
     }
+    setSearchParams(params);
   };
 
   const handleSearchHistoryClick = (term: string) => {
-    setSearchQuery(term);
+    const params = new URLSearchParams(searchParams);
+    params.set('search', term);
+    setSearchParams(params);
     setShowSearchHistory(false);
     addToHistory(term);
+  };
+
+  const handleCategorySelect = (categoryId: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (categoryId) {
+      params.set('category', categoryId);
+    } else {
+      params.delete('category');
+    }
+    setSearchParams(params);
+  };
+
+  const handleClearFilters = () => {
+    setSearchParams(new URLSearchParams());
+    setDietaryFilters({
+      vegetarian: false,
+      vegan: false,
+      glutenFree: false,
+      nonVeg: false,
+    });
   };
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
@@ -387,8 +558,7 @@ const Menu: React.FC = () => {
                 searchQuery ? (
                   <button
                     onClick={() => {
-                      setSearchQuery('');
-                      setShowSearchHistory(false);
+                      handleSearchChange('');
                     }}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
@@ -456,8 +626,119 @@ const Menu: React.FC = () => {
       <CategoryFilter
         categories={categories}
         selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
+        onSelectCategory={handleCategorySelect}
       />
+
+      {/* Dietary Type Filter */}
+      <div className="bg-white border-t border-gray-200 shadow-sm sticky top-20 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Filter className="h-5 w-5 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Dietary Filters</span>
+              {Object.values(dietaryFilters).some(v => v) && (
+                <Badge
+                  variant="primary"
+                  size="sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+                  }}
+                >
+                  {Object.values(dietaryFilters).filter(v => v).length} active
+                </Badge>
+              )}
+            </div>
+            <button
+              onClick={() => setShowDietaryFilter(!showDietaryFilter)}
+              className="flex items-center space-x-2 text-sm font-medium transition-colors"
+              style={{ color: primaryColor }}
+            >
+              <span>{showDietaryFilter ? 'Hide' : 'Show'}</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showDietaryFilter ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </div>
+
+          {/* Dropdown with checkboxes */}
+          {showDietaryFilter && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="flex items-center space-x-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={dietaryFilters.vegetarian}
+                    onChange={(e) =>
+                      setDietaryFilters({ ...dietaryFilters, vegetarian: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                    style={{ accentColor: primaryColor }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🌱 Vegetarian</span>
+                </label>
+
+                <label className="flex items-center space-x-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={dietaryFilters.vegan}
+                    onChange={(e) =>
+                      setDietaryFilters({ ...dietaryFilters, vegan: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                    style={{ accentColor: primaryColor }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🥬 Vegan</span>
+                </label>
+
+                <label className="flex items-center space-x-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={dietaryFilters.glutenFree}
+                    onChange={(e) =>
+                      setDietaryFilters({ ...dietaryFilters, glutenFree: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                    style={{ accentColor: primaryColor }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🌾 Gluten Free</span>
+                </label>
+
+                <label className="flex items-center space-x-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={dietaryFilters.nonVeg}
+                    onChange={(e) =>
+                      setDietaryFilters({ ...dietaryFilters, nonVeg: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-indigo-500"
+                    style={{ accentColor: primaryColor }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🍖 Non-Veg</span>
+                </label>
+              </div>
+
+              {/* Clear all button */}
+              {Object.values(dietaryFilters).some(v => v) && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setDietaryFilters({
+                        vegetarian: false,
+                        vegan: false,
+                        glutenFree: false,
+                        nonVeg: false,
+                      });
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                  >
+                    Clear dietary filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Menu Items Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -475,13 +756,10 @@ const Menu: React.FC = () => {
                   ? `No results for "${searchQuery}"`
                   : 'Try selecting a different category'}
               </p>
-              {(selectedCategory || searchQuery) && (
+              {(selectedCategory || searchQuery || Object.values(dietaryFilters).some(v => v)) && (
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSelectedCategory(null);
-                    setSearchQuery('');
-                  }}
+                  onClick={handleClearFilters}
                 >
                   Clear filters
                 </Button>
@@ -510,6 +788,8 @@ const Menu: React.FC = () => {
                   onQuickAdd={handleQuickAdd}
                   cartQuantity={getCartQuantity(item._id)}
                   onQuantityChange={handleQuantityChange}
+                  isFavorite={favoriteIds.has(item._id)}
+                  onToggleFavorite={handleToggleFavorite}
                 />
               ))}
             </div>

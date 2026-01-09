@@ -6,6 +6,7 @@ import Card, { CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import BackButton from '../components/ui/BackButton';
 import { useUser } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -17,7 +18,13 @@ interface MenuItem {
   description: string;
   price: number;
   image?: string;
-  category: {
+  images?: {
+    original?: string;
+    large?: string;
+    medium?: string;
+    small?: string;
+  };
+  categoryId: {
     _id: string;
     name: string;
   };
@@ -53,9 +60,8 @@ const Favorites: React.FC = () => {
       const response = await favoritesApi.getFavorites();
 
       if (response.success) {
-        // Extract menu items from favorites
-        const menuItems = response.data.map((fav: any) => fav.menuItemId);
-        setFavorites(menuItems);
+        // Backend returns menu items directly in data array
+        setFavorites(response.data || []);
       }
     } catch (error: any) {
       console.error('Failed to fetch favorites:', error);
@@ -105,6 +111,19 @@ const Favorites: React.FC = () => {
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Get image URL handling both old and new formats
+  const getImageUrl = (item: MenuItem): string | null => {
+    const imagePath = item.images?.original || item.image;
+    if (!imagePath) return null;
+
+    // If already a full URL, use as-is
+    if (imagePath.startsWith('http')) return imagePath;
+
+    // Otherwise, prepend backend URL
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    return `${baseUrl}${imagePath}`;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -119,6 +138,11 @@ const Favorites: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-4">
+          <BackButton to="/menu" label="Back to Menu" />
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div
@@ -178,91 +202,94 @@ const Favorites: React.FC = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFavorites.map((item) => (
-              <Card key={item._id} className="hover:shadow-xl transition-shadow">
-                {item.image && (
-                  <div className="relative h-48 overflow-hidden rounded-t-lg">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {!item.isAvailable && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                        <Badge variant="danger">Unavailable</Badge>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => handleRemoveFavorite(item._id)}
-                      disabled={removingId === item._id}
-                      className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors"
-                      title="Remove from favorites"
-                    >
-                      {removingId === item._id ? (
-                        <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
-                      ) : (
-                        <Heart
-                          className="h-5 w-5 text-red-500"
-                          fill="currentColor"
-                        />
+            {filteredFavorites.map((item) => {
+              const imageUrl = getImageUrl(item);
+              return (
+                <Card key={item._id} className="hover:shadow-xl transition-shadow">
+                  {imageUrl && (
+                    <div className="relative h-48 overflow-hidden rounded-t-lg">
+                      <img
+                        src={imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {!item.isAvailable && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                          <Badge variant="danger">Unavailable</Badge>
+                        </div>
                       )}
-                    </button>
-                  </div>
-                )}
+                      <button
+                        onClick={() => handleRemoveFavorite(item._id)}
+                        disabled={removingId === item._id}
+                        className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors"
+                        title="Remove from favorites"
+                      >
+                        {removingId === item._id ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
+                        ) : (
+                          <Heart
+                            className="h-5 w-5 text-red-500"
+                            fill="currentColor"
+                          />
+                        )}
+                      </button>
+                    </div>
+                  )}
 
-                <CardBody>
-                  <div className="mb-2">
-                    <Badge variant="info">{item.category.name}</Badge>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {item.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {item.description}
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-gray-900">
-                      ${item.price.toFixed(2)}
-                    </span>
-                    {item.preparationTime && (
-                      <span className="text-sm text-gray-500">
-                        ~{item.preparationTime} min
+                  <CardBody>
+                    <div className="mb-2">
+                      <Badge variant="info">{item.categoryId?.name || 'Uncategorized'}</Badge>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {item.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      {item.description}
+                    </p>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-2xl font-bold text-gray-900">
+                        ${item.price.toFixed(2)}
                       </span>
-                    )}
-                  </div>
-                </CardBody>
+                      {item.preparationTime && (
+                        <span className="text-sm text-gray-500">
+                          ~{item.preparationTime} min
+                        </span>
+                      )}
+                    </div>
+                  </CardBody>
 
-                <CardFooter>
-                  <div className="flex items-center space-x-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      fullWidth
-                      onClick={() => handleRemoveFavorite(item._id)}
-                      disabled={removingId === item._id}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      fullWidth
-                      onClick={() => handleAddToCart(item)}
-                      disabled={!item.isAvailable}
-                      style={{
-                        background: item.isAvailable
-                          ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
-                          : undefined,
-                      }}
-                    >
-                      <ShoppingBag className="h-4 w-4 mr-2" />
-                      Add to Cart
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
+                  <CardFooter>
+                    <div className="flex items-center space-x-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        fullWidth
+                        onClick={() => handleRemoveFavorite(item._id)}
+                        disabled={removingId === item._id}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        fullWidth
+                        onClick={() => handleAddToCart(item)}
+                        disabled={!item.isAvailable}
+                        style={{
+                          background: item.isAvailable
+                            ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`
+                            : undefined,
+                        }}
+                      >
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

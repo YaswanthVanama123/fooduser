@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
+import BackButton from '../components/ui/BackButton';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import Loading from '../components/Loading';
 import ErrorMessage from '../components/ErrorMessage';
@@ -232,6 +233,11 @@ const OrderTracking: React.FC = () => {
       <Header />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <div className="mb-4">
+          <BackButton to="/menu" label="Back to Menu" />
+        </div>
+
         {/* Breadcrumbs */}
         <div className="mb-6">
           <Breadcrumbs

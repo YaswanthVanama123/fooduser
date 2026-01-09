@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Lock, Eye, EyeOff, Check, X, Shield, ArrowLeft } from 'lucide-react';
+import { Lock, Eye, EyeOff, Check, X, Shield } from 'lucide-react';
 import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import BackButton from '../components/ui/BackButton';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -219,6 +220,11 @@ const ChangePassword: React.FC = () => {
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-4">
+            <BackButton to="/profile" label="Back to Profile" />
+          </div>
+
           {/* Breadcrumbs */}
           <div className="mb-6">
             <Breadcrumbs items={breadcrumbItems} />
@@ -243,17 +249,7 @@ const ChangePassword: React.FC = () => {
           {/* Main Card */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Update Your Password</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/profile')}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </div>
+              <h2 className="text-xl font-bold text-gray-900">Update Your Password</h2>
             </CardHeader>
 
             <form onSubmit={handleSubmit}>

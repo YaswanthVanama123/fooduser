@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import BackButton from '../components/ui/BackButton';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 import SEO from '../components/SEO';
 import { useUser } from '../context/UserContext';
@@ -238,6 +239,11 @@ const Settings: React.FC = () => {
       />
 
       <div className="max-w-5xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-4">
+          <BackButton to="/profile" label="Back to Profile" />
+        </div>
+
         {/* Breadcrumbs */}
         <Breadcrumbs
           items={[

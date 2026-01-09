@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Wheat, Clock, Star, Sparkles, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { Leaf, Wheat, Clock, Star, Sparkles, Plus, Minus, ShoppingCart, Heart } from 'lucide-react';
 import { MenuItem as MenuItemType } from '../types';
 import { useRestaurant } from '../context/RestaurantContext';
 import Card from './ui/Card';
@@ -12,14 +12,26 @@ interface MenuItemProps {
   onQuickAdd?: (item: MenuItemType, quantity: number) => void;
   cartQuantity: number;
   onQuantityChange: (item: MenuItemType, newQuantity: number) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (itemId: string) => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuantity, onQuantityChange }) => {
+const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuantity, onQuantityChange, isFavorite = false, onToggleFavorite }) => {
   const { restaurant } = useRestaurant();
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
   const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+
+  // Calculate discount percentage
+  const calculateDiscount = (): number | null => {
+    if (item.originalPrice && item.originalPrice > item.price) {
+      return Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
+    }
+    return null;
+  };
+
+  const discountPercentage = calculateDiscount();
 
   // Get image URL handling both old and new formats
   const getImageUrl = (item: MenuItemType): string | null => {
@@ -57,6 +69,13 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
     }
   };
 
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleFavorite) {
+      onToggleFavorite(item._id);
+    }
+  };
+
   return (
     <Card
       className="overflow-hidden group transition-all duration-300 flex flex-col"
@@ -75,6 +94,21 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
             <span className="text-6xl sm:text-7xl">🍽️</span>
           </div>
+        )}
+
+        {/* Favorite Button */}
+        {onToggleFavorite && (
+          <button
+            onClick={handleToggleFavorite}
+            className="absolute top-2 sm:top-3 left-2 sm:left-3 p-2 bg-white rounded-full shadow-lg hover:scale-110 transition-transform z-10"
+            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart
+              className={`h-4 w-4 sm:h-5 sm:w-5 transition-colors ${
+                isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+              }`}
+            />
+          </button>
         )}
 
         {/* Dietary Badges */}
@@ -98,7 +132,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
 
         {/* Popular Badge */}
         {item.averageRating && item.averageRating >= 4.5 && (
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
+          <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3">
             <Badge variant="warning" size="sm" className="backdrop-blur-sm bg-yellow-400/90 text-xs sm:text-sm">
               <Sparkles className="h-3 w-3 mr-1 fill-current" />
               Popular
@@ -146,16 +180,42 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
 
         {/* Price and Time Row */}
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-200">
-          <div>
-            <div
-              className="text-xl sm:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-              }}
-            >
-              {formatPrice(item.price)}
+          <div className="flex-1">
+            {/* Discount Badge */}
+            {discountPercentage && (
+              <div className="mb-1">
+                <Badge
+                  variant="success"
+                  size="sm"
+                  className="bg-green-500 text-white font-semibold px-2 py-0.5"
+                >
+                  {discountPercentage}% OFF
+                </Badge>
+              </div>
+            )}
+
+            {/* Price Row - Original and Current Price on same line */}
+            <div className="flex items-center gap-2 mb-1">
+              {/* Original Price (if discount) */}
+              {item.originalPrice && item.originalPrice > item.price && (
+                <span className="text-sm text-gray-400 line-through">
+                  {formatPrice(item.originalPrice)}
+                </span>
+              )}
+
+              {/* Current Price */}
+              <div
+                className="text-xl sm:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r"
+                style={{
+                  backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                }}
+              >
+                {formatPrice(item.price)}
+              </div>
             </div>
-            <div className="min-h-[20px] mt-1">
+
+            {/* Customizable Text */}
+            <div className="min-h-[20px]">
               {hasCustomizations && (
                 <p className="text-xs text-gray-500 flex items-center">
                   <Sparkles className="h-3 w-3 mr-1" />
