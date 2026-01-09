@@ -124,16 +124,18 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
         </h3>
 
         {/* Ratings */}
-        {item.averageRating !== undefined && item.totalReviews !== undefined && item.totalReviews > 0 && (
-          <div className="mb-3">
+        <div className="mb-3 min-h-[24px]">
+          {item.averageRating !== undefined && item.totalReviews !== undefined && item.totalReviews > 0 ? (
             <RatingStars
               rating={item.averageRating}
               size="sm"
               showCount={true}
               count={item.totalReviews}
             />
-          </div>
-        )}
+          ) : (
+            <div className="h-[24px]"></div>
+          )}
+        </div>
 
         {/* Description */}
         {item.description && (
@@ -153,12 +155,14 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
             >
               {formatPrice(item.price)}
             </div>
-            {hasCustomizations && (
-              <p className="text-xs text-gray-500 mt-1 flex items-center">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Customizable
-              </p>
-            )}
+            <div className="min-h-[20px] mt-1">
+              {hasCustomizations && (
+                <p className="text-xs text-gray-500 flex items-center">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Customizable
+                </p>
+              )}
+            </div>
           </div>
 
           {item.preparationTime && (
@@ -226,16 +230,18 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
             </button>
           )}
 
-          {/* View Details Link */}
-          {hasCustomizations && (
-            <button
-              onClick={handleCardClick}
-              className="w-full mt-2 text-xs text-center py-1 hover:underline transition-colors"
-              style={{ color: primaryColor }}
-            >
-              Click for customization options
-            </button>
-          )}
+          {/* View Details Link - Always reserve space */}
+          <div className="min-h-[28px] mt-2">
+            {hasCustomizations && (
+              <button
+                onClick={handleCardClick}
+                className="w-full text-xs text-center py-1 hover:underline transition-colors"
+                style={{ color: primaryColor }}
+              >
+                Click for customization options
+              </button>
+            )}
+          </div>
         </div>
       )}
     </Card>
