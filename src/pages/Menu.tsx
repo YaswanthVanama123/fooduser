@@ -249,7 +249,7 @@ const Menu: React.FC = () => {
           description="Browse our delicious menu and order your favorite dishes"
           keywords={['menu', 'food', 'dishes', 'order online']}
         />
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-white">
           <Header />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="mb-6">
@@ -276,7 +276,7 @@ const Menu: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-white">
       <SEO
         title="Menu"
         description="Browse our delicious menu and order your favorite dishes"
@@ -292,8 +292,8 @@ const Menu: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white shadow-lg border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white shadow border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="relative search-container">
             <Input
               type="text"
@@ -325,7 +325,7 @@ const Menu: React.FC = () => {
 
             {/* Search History Dropdown */}
             {showSearchHistory && history.length > 0 && !searchQuery && (
-              <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200">
+              <div className="absolute z-10 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200">
                 <div className="p-3 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-gray-400" />
@@ -415,7 +415,7 @@ const Menu: React.FC = () => {
         ) : (
           <>
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900">
                 {selectedCategory
                   ? categories.find((c) => c._id === selectedCategory)?.name || 'Menu'
                   : 'All Items'}
@@ -425,7 +425,7 @@ const Menu: React.FC = () => {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredItems.map((item) => (
                 <MenuItem key={item._id} item={item} onClick={() => handleItemClick(item)} />
               ))}

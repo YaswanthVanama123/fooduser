@@ -104,7 +104,7 @@ const Header: React.FC = () => {
 
   return (
     <header
-      className="sticky top-0 z-50 shadow-xl backdrop-blur-lg bg-opacity-95"
+      className="sticky top-0 z-50 shadow-lg backdrop-blur-lg bg-opacity-90"
       style={{
         background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
       }}
@@ -129,7 +129,7 @@ const Header: React.FC = () => {
               onClick={() => !isHomePage && navigate('/menu')}
             >
               {logoUrl ? (
-                <div className="h-14 w-14 rounded-xl bg-white p-2 shadow-lg group-hover:scale-110 transition-transform">
+                <div className="h-14 w-14 rounded-xl bg-white p-2 shadow-lg transition-transform">
                   <img
                     src={logoUrl}
                     alt={restaurant.name}
@@ -137,13 +137,13 @@ const Header: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="h-14 w-14 rounded-xl bg-white bg-opacity-20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="h-14 w-14 rounded-xl bg-white bg-opacity-20 flex items-center justify-center transition-transform">
                   <MenuIcon className="h-8 w-8 text-white" />
                 </div>
               )}
 
               <div>
-                <h1 className="text-white text-2xl font-bold tracking-tight">
+                <h1 className="text-white text-2xl font-semibold tracking-tight">
                   {restaurant?.name || 'Restaurant'}
                 </h1>
                 {tableNumber && (
@@ -173,7 +173,7 @@ const Header: React.FC = () => {
             {isAuthenticated && activeOrder && !isOrderTrackingPage && (
               <button
                 onClick={() => navigate(`/order/${activeOrder._id}`)}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium animate-pulse"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium"
               >
                 <ClipboardList className="h-5 w-5" />
                 <span className="hidden sm:inline">Track Order</span>
@@ -188,7 +188,7 @@ const Header: React.FC = () => {
               >
                 <ShoppingCart className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                  <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
                     {cartItemCount}
                   </span>
                 )}
@@ -203,7 +203,7 @@ const Header: React.FC = () => {
                   className="flex items-center space-x-2 p-2 rounded-xl bg-white bg-opacity-20 hover:bg-opacity-30 transition-all group"
                   aria-label="User menu"
                 >
-                  <div className="h-10 w-10 rounded-full bg-white text-indigo-600 flex items-center justify-center font-bold text-sm shadow-lg group-hover:scale-110 transition-transform">
+                  <div className="h-10 w-10 rounded-full bg-white text-indigo-600 flex items-center justify-center font-bold text-sm shadow-lg transition-transform">
                     {getUserInitials()}
                   </div>
                   <span className="hidden md:inline-block text-white font-medium max-w-[120px] truncate">
@@ -213,9 +213,9 @@ const Header: React.FC = () => {
 
                 {/* Dropdown Menu */}
                 {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-5 duration-200">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl overflow-hidden z-50 animate-fadeIn">
                     {/* User Info Header */}
-                    <div className="px-4 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
+                    <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
                         {user.username}
                       </p>
@@ -226,25 +226,25 @@ const Header: React.FC = () => {
                     <div className="py-2">
                       <button
                         onClick={() => handleMenuClick('/order-history')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <Clock className="h-5 w-5 text-indigo-600" />
+                        <Clock className="h-5 w-5 text-gray-600" />
                         <span className="text-sm font-medium text-gray-900">Order History</span>
                       </button>
 
                       <button
                         onClick={() => handleMenuClick('/favorites')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <Star className="h-5 w-5 text-indigo-600" />
+                        <Star className="h-5 w-5 text-gray-600" />
                         <span className="text-sm font-medium text-gray-900">My Favorites</span>
                       </button>
 
                       <button
                         onClick={() => handleMenuClick('/profile')}
-                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <Settings className="h-5 w-5 text-indigo-600" />
+                        <Settings className="h-5 w-5 text-gray-600" />
                         <span className="text-sm font-medium text-gray-900">Settings</span>
                       </button>
 

@@ -40,13 +40,13 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className={`relative bg-white rounded-2xl shadow-2xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden transform transition-all`}
+          className={`relative bg-white rounded-2xl shadow-xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden transform transition-all`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           {(title || showCloseButton) && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              {title && <h2 className="text-2xl font-bold text-gray-900">{title}</h2>}
+              {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
               {showCloseButton && (
                 <button
                   onClick={onClose}

@@ -32,7 +32,7 @@ const Input: React.FC<InputProps> = ({
         )}
         <input
           className={`
-            w-full rounded-lg border-2 transition-all duration-200
+            w-full rounded-lg border transition-all duration-200
             ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}
             ${leftIcon ? 'pl-10' : 'pl-4'}
             ${rightIcon ? 'pr-10' : 'pr-4'}

@@ -22,24 +22,22 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
       return {
         backgroundColor: primaryColor,
         color: '#ffffff',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
-        transform: 'translateY(-2px)',
       };
     }
     return {
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f3f4f6',
       color: '#374151',
     };
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm sticky top-20 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="bg-gray-50 border-t border-gray-200 shadow-sm sticky top-20 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center space-x-3 overflow-x-auto scrollbar-hide pb-2">
           {/* All Items Button */}
           <button
             onClick={() => onSelectCategory(null)}
-            className="group relative px-6 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center space-x-2 border-2"
+            className="group relative px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center space-x-2 border"
             style={getButtonStyle(selectedCategory === null)}
           >
             {selectedCategory === null && (
@@ -56,7 +54,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
               <button
                 key={category._id}
                 onClick={() => onSelectCategory(category._id)}
-                className="group relative px-6 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center space-x-2 border-2 border-gray-200 hover:border-gray-300"
+                className="group relative px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap transition-all duration-300 flex items-center space-x-2 border border-gray-200 hover:border-gray-300"
                 style={getButtonStyle(selectedCategory === category._id)}
               >
                 {selectedCategory === category._id && (
