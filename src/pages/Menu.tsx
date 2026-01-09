@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Search, X, Plus, Minus, ShoppingBag, Clock } from 'lucide-react';
@@ -18,7 +18,7 @@ import { MenuGridSkeleton } from '../components/ui/Skeleton';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useSearchHistory } from '../hooks/useSearchHistory';
-import { menuApi, categoriesApi } from '../api';
+import { menuApi } from '../api';
 import { MenuItem as MenuItemType, Category, CartItem, Customization } from '../types';
 
 const Menu: React.FC = () => {
@@ -43,64 +43,11 @@ const Menu: React.FC = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  useEffect(() => {
-    // Redirect to table selection if no table selected
-    if (!tableId) {
-      navigate('/');
-      return;
-    }
+  // Ref to prevent duplicate API calls (especially in React StrictMode)
+  const hasFetchedData = useRef(false);
 
-    fetchData();
-  }, [tableId]);
-
-  useEffect(() => {
-    filterItems();
-  }, [selectedCategory, searchQuery, menuItems]);
-
-  useEffect(() => {
-    // Close search history dropdown when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.search-container')) {
-        setShowSearchHistory(false);
-      }
-    };
-
-    if (showSearchHistory) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showSearchHistory]);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [categoriesResponse, menuResponse] = await Promise.all([
-        categoriesApi.getAll(),
-        menuApi.getAll({ available: true }),
-      ]);
-
-      if (categoriesResponse.success) {
-        setCategories(categoriesResponse.data);
-      }
-
-      if (menuResponse.success) {
-        setMenuItems(menuResponse.data);
-      }
-    } catch (err: any) {
-      console.error('Error fetching data:', err);
-      setError(err.response?.data?.message || 'Failed to load menu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterItems = () => {
+  // Memoized filter function
+  const filterItems = useCallback(() => {
     let filtered = [...menuItems];
 
     // Filter by category
@@ -125,7 +72,65 @@ const Menu: React.FC = () => {
     }
 
     setFilteredItems(filtered);
-  };
+  }, [menuItems, selectedCategory, searchQuery]);
+
+  // Memoized fetch function to prevent duplicate API calls
+  const fetchData = useCallback(async () => {
+    // Prevent duplicate calls
+    if (hasFetchedData.current) return;
+    hasFetchedData.current = true;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // OPTIMIZED: Single API call returns both categories and menu items
+      const response = await menuApi.getPageData(true); // true = available only
+
+      if (response.success) {
+        setCategories(response.data.categories || []);
+        setMenuItems(response.data.menuItems || []);
+      }
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError(err.response?.data?.message || 'Failed to load menu');
+      hasFetchedData.current = false; // Reset on error to allow retry
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty deps - function doesn't depend on external values
+
+  useEffect(() => {
+    // Redirect to table selection if no table selected
+    if (!tableId) {
+      navigate('/');
+      return;
+    }
+
+    fetchData();
+  }, [tableId, navigate, fetchData]);
+
+  useEffect(() => {
+    filterItems();
+  }, [filterItems]);
+
+  useEffect(() => {
+    // Close search history dropdown when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.search-container')) {
+        setShowSearchHistory(false);
+      }
+    };
+
+    if (showSearchHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchHistory]);
 
   // Get cart quantity for a specific menu item (without customizations)
   const getCartQuantity = (menuItemId: string): number => {

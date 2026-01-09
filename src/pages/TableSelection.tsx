@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Users, MapPin, Armchair, Lightbulb, CheckCircle, Check, LogIn } from 'lucide-react';
@@ -29,37 +29,43 @@ const TableSelection: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  // Ref to prevent duplicate API calls for active order
+  const hasFetchedActiveOrder = useRef(false);
+
   useEffect(() => {
     if (restaurant) {
       connectToRestaurant(restaurant._id);
     }
   }, [restaurant]);
 
-  // Fetch active order when user is authenticated
-  useEffect(() => {
-    const fetchActiveOrder = async () => {
-      if (isAuthenticated) {
-        try {
-          const response = await authApi.getActiveOrder();
-          if (response.success && response.data) {
-            setActiveOrder(response.data);
-            // Show notification that user has an active order
-            toast.success(`You have an active order at Table ${response.data.tableNumber}!`, {
-              style: {
-                background: restaurant?.branding?.primaryColor || '#6366f1',
-                color: '#fff',
-              },
-              duration: 5000,
-            });
-          }
-        } catch (error) {
-          console.error('Failed to fetch active order:', error);
-        }
-      }
-    };
+  // Fetch active order when user is authenticated (with duplicate call prevention)
+  const fetchActiveOrder = useCallback(async () => {
+    // Prevent duplicate calls
+    if (hasFetchedActiveOrder.current || !isAuthenticated) return;
+    hasFetchedActiveOrder.current = true;
 
-    fetchActiveOrder();
+    try {
+      const response = await authApi.getActiveOrder();
+      if (response.success && response.data) {
+        setActiveOrder(response.data);
+        // Show notification that user has an active order
+        toast.success(`You have an active order at Table ${response.data.tableNumber}!`, {
+          style: {
+            background: restaurant?.branding?.primaryColor || '#6366f1',
+            color: '#fff',
+          },
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch active order:', error);
+      hasFetchedActiveOrder.current = false; // Reset on error to allow retry
+    }
   }, [isAuthenticated, restaurant]);
+
+  useEffect(() => {
+    fetchActiveOrder();
+  }, [fetchActiveOrder]);
 
   const handleTableSelect = (table: Table) => {
     // Check if user has an active order for this table

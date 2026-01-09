@@ -9,6 +9,7 @@ import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import TextArea from '../components/ui/TextArea';
 import Badge from '../components/ui/Badge';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import SimpleAuthModal from '../components/SimpleAuthModal';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -24,10 +25,17 @@ const Cart: React.FC = () => {
   const [orderNotes, setOrderNotes] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
 
   const { subtotal, tax, total } = getCartTotal();
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
+
+  const handleClearCart = () => {
+    clearCart();
+    toast.success('Cart cleared');
+    setShowClearCartModal(false);
+  };
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
@@ -189,12 +197,7 @@ const Cart: React.FC = () => {
                   </h2>
                   {cart.length > 0 && (
                     <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to clear your cart?')) {
-                          clearCart();
-                          toast.success('Cart cleared');
-                        }
-                      }}
+                      onClick={() => setShowClearCartModal(true)}
                       className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
                     >
                       Clear All
@@ -447,6 +450,18 @@ const Cart: React.FC = () => {
         onClose={() => setShowAuthModal(false)}
         onLogin={login}
         onRegister={register}
+      />
+
+      {/* Clear Cart Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showClearCartModal}
+        onClose={() => setShowClearCartModal(false)}
+        onConfirm={handleClearCart}
+        title="Clear Cart"
+        message="Are you sure you want to clear your cart? This action cannot be undone."
+        confirmText="Clear Cart"
+        cancelText="Cancel"
+        variant="danger"
       />
     </div>
   );

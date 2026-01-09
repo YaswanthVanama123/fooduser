@@ -13,6 +13,16 @@ export interface MenuFilters {
 
 export const menuApi = {
   /**
+   * Get menu page data (OPTIMIZED) - Returns categories + menu items in 1 call
+   */
+  getPageData: async (available?: boolean) => {
+    const response = await apiClient.get('/menu/page-data', {
+      params: available !== undefined ? { available } : {},
+    });
+    return response.data;
+  },
+
+  /**
    * Get all menu items with optional filters
    */
   getAll: async (filters?: MenuFilters) => {

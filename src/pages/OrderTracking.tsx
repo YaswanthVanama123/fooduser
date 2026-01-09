@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, ChefHat, AlertCircle, PackageCheck, Home, Wifi, WifiOff, Users, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -32,14 +32,47 @@ const OrderTracking: React.FC = () => {
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [reviewingItemIndex, setReviewingItemIndex] = useState<number | null>(null);
 
+  // Ref to prevent duplicate API calls (especially in React StrictMode)
+  const hasFetchedOrder = useRef(false);
+  const previousOrderId = useRef(orderId);
+
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
-  useEffect(() => {
-    if (orderId) {
-      fetchOrder();
+  const fetchOrder = useCallback(async () => {
+    // Check if orderId changed - if so, reset the guard
+    if (orderId !== previousOrderId.current) {
+      hasFetchedOrder.current = false;
+      previousOrderId.current = orderId;
+    }
+
+    // Prevent duplicate calls
+    if (hasFetchedOrder.current || !orderId) return;
+    hasFetchedOrder.current = true;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await ordersApi.getById(orderId);
+
+      if (response.success) {
+        setOrder(response.data);
+      } else {
+        setError('Order not found');
+      }
+    } catch (err: any) {
+      console.error('Error fetching order:', err);
+      setError(err.response?.data?.message || 'Failed to load order');
+      hasFetchedOrder.current = false; // Reset on error to allow retry
+    } finally {
+      setLoading(false);
     }
   }, [orderId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   useEffect(() => {
     if (socket && orderId) {
@@ -71,26 +104,6 @@ const OrderTracking: React.FC = () => {
       };
     }
   }, [socket, orderId]);
-
-  const fetchOrder = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await ordersApi.getById(orderId!);
-
-      if (response.success) {
-        setOrder(response.data);
-      } else {
-        setError('Order not found');
-      }
-    } catch (err: any) {
-      console.error('Error fetching order:', err);
-      setError(err.response?.data?.message || 'Failed to load order');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusTimeline = (currentStatus: OrderStatus) => {
     const statuses: OrderStatus[] = ['received', 'preparing', 'ready', 'served'];

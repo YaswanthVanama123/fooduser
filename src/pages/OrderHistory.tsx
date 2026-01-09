@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -16,10 +16,13 @@ import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import OrderStatusBadge from '../components/OrderStatusBadge';
 import { useUser } from '../context/UserContext';
 import { useRestaurant } from '../context/RestaurantContext';
+import { useCart } from '../context/CartContext';
 import authApi from '../api/auth.api';
+import { ordersApi } from '../api';
 
 interface OrderItem {
   menuItemId: string | {
@@ -30,8 +33,14 @@ interface OrderItem {
   };
   name: string;
   quantity: number;
+  customizations?: Array<{
+    name: string;
+    options: string[];
+    priceModifier: number;
+  }>;
   specialInstructions?: string;
   price: number;
+  subtotal: number;
 }
 
 interface Order {
@@ -49,6 +58,7 @@ const OrderHistory: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useUser();
   const { restaurant } = useRestaurant();
+  const { addToCart, clearCart } = useCart();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,19 +67,28 @@ const OrderHistory: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [orderToReorder, setOrderToReorder] = useState<string | null>(null);
+
+  // Ref to prevent duplicate API calls (especially in React StrictMode)
+  const hasFetchedOrders = useRef(false);
+  const previousDeps = useRef({ page, statusFilter, isAuthenticated });
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/order-history');
-      return;
+  const fetchOrders = useCallback(async () => {
+    // Check if dependencies changed - reset guard if needed
+    const currentDeps = { page, statusFilter, isAuthenticated };
+    if (JSON.stringify(currentDeps) !== JSON.stringify(previousDeps.current)) {
+      hasFetchedOrders.current = false;
+      previousDeps.current = currentDeps;
     }
-    fetchOrders();
-  }, [page, statusFilter, isAuthenticated]);
 
-  const fetchOrders = async () => {
+    // Prevent duplicate calls
+    if (hasFetchedOrders.current || !isAuthenticated) return;
+    hasFetchedOrders.current = true;
+
     try {
       setIsLoading(true);
       const response = await authApi.getOrderHistory({
@@ -85,30 +104,116 @@ const OrderHistory: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch orders:', error);
       toast.error('Failed to load order history');
+      hasFetchedOrders.current = false; // Reset on error
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [page, statusFilter, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/order-history');
+      return;
+    }
+    fetchOrders();
+  }, [isAuthenticated, navigate, fetchOrders]);
 
   const handleReorder = async (orderId: string) => {
-    try {
-      setReorderingId(orderId);
-      const response = await authApi.reorder(orderId);
+    setOrderToReorder(orderId);
+    setShowReorderModal(true);
+  };
 
-      if (response.success) {
-        toast.success('Items added to cart!', {
-          style: {
-            background: primaryColor,
-            color: '#fff',
-          },
-        });
-        navigate('/cart');
+  const handleReorderConfirm = async () => {
+    if (!orderToReorder) return;
+
+    try {
+      setReorderingId(orderToReorder);
+      setShowReorderModal(false);
+
+      // Fetch the full order details to get all items
+      const response = await ordersApi.getById(orderToReorder);
+
+      if (!response.success || !response.data) {
+        throw new Error('Failed to fetch order details');
+      }
+
+      const order = response.data;
+
+      // Check if order has items
+      if (!order.items || order.items.length === 0) {
+        toast.error('This order has no items to reorder');
+        return;
+      }
+
+      // Clear existing cart
+      clearCart();
+
+      // Add each item to cart
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      for (const item of order.items) {
+        try {
+          // Get menu item ID (handle both populated and unpopulated)
+          const menuItemId = typeof item.menuItemId === 'object'
+            ? item.menuItemId._id
+            : item.menuItemId;
+
+          // Get item details
+          const itemName = typeof item.menuItemId === 'object'
+            ? item.menuItemId.name
+            : item.name;
+
+          const itemImage = typeof item.menuItemId === 'object' && item.menuItemId.image
+            ? item.menuItemId.image
+            : undefined;
+
+          // Create cart item
+          const cartItem = {
+            menuItemId,
+            name: itemName,
+            price: item.price,
+            quantity: item.quantity,
+            customizations: item.customizations || [],
+            subtotal: item.subtotal || (item.price * item.quantity),
+            specialInstructions: item.specialInstructions,
+            image: itemImage,
+          };
+
+          addToCart(cartItem);
+          addedCount++;
+        } catch (error) {
+          console.error('Failed to add item to cart:', error);
+          skippedCount++;
+        }
+      }
+
+      // Show success message
+      if (addedCount > 0) {
+        toast.success(
+          `${addedCount} item(s) added to cart!${skippedCount > 0 ? ` (${skippedCount} unavailable)` : ''}`,
+          {
+            style: {
+              background: primaryColor,
+              color: '#fff',
+            },
+            duration: 3000,
+          }
+        );
+
+        // Navigate to cart after a short delay
+        setTimeout(() => {
+          navigate('/cart');
+        }, 500);
+      } else {
+        toast.error('No items could be added to cart');
       }
     } catch (error: any) {
       console.error('Reorder failed:', error);
       toast.error(error.response?.data?.message || 'Failed to reorder');
     } finally {
       setReorderingId(null);
+      setOrderToReorder(null);
     }
   };
 
@@ -310,7 +415,7 @@ const OrderHistory: React.FC = () => {
                   </div>
 
                   {/* Order Total and Actions */}
-                  <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 pt-4 gap-4">
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-5 w-5 text-gray-600" />
                       <span className="text-sm text-gray-600">Total:</span>
@@ -318,11 +423,12 @@ const OrderHistory: React.FC = () => {
                         ${(order.total || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/order/${order._id}`)}
+                        className="w-full sm:w-auto"
                       >
                         <ChevronRight className="h-4 w-4 mr-1" />
                         View Details
@@ -332,6 +438,7 @@ const OrderHistory: React.FC = () => {
                         size="sm"
                         onClick={() => handleReorder(order._id)}
                         isLoading={reorderingId === order._id}
+                        className="w-full sm:w-auto"
                         style={{
                           background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
                         }}
@@ -360,6 +467,21 @@ const OrderHistory: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Reorder Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showReorderModal}
+        onClose={() => {
+          setShowReorderModal(false);
+          setOrderToReorder(null);
+        }}
+        onConfirm={handleReorderConfirm}
+        title="Reorder Items"
+        message="This will replace your current cart with items from this order. Continue?"
+        confirmText="Yes, Reorder"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </div>
   );
 };

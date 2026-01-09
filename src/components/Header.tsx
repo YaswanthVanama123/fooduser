@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, ClipboardList, Clock, Star, Settings } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -19,6 +19,9 @@ const Header: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Ref to prevent duplicate initial API calls (especially in React StrictMode)
+  const hasFetchedInitialOrder = useRef(false);
+
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isHomePage = location.pathname === '/';
   const isMenuPage = location.pathname === '/menu';
@@ -28,34 +31,45 @@ const Header: React.FC = () => {
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
-  // Fetch active order when user is authenticated
-  useEffect(() => {
-    const fetchActiveOrder = async () => {
-      if (isAuthenticated) {
-        try {
-          const response = await authApi.getActiveOrder();
-          if (response.success && response.data) {
-            setActiveOrder(response.data);
-          } else {
-            setActiveOrder(null);
-          }
-        } catch (error) {
-          console.error('Failed to fetch active order:', error);
-          setActiveOrder(null);
-        }
+  // Memoized function to fetch active order
+  const fetchActiveOrder = useCallback(async (skipGuard = false) => {
+    if (!isAuthenticated) {
+      setActiveOrder(null);
+      return;
+    }
+
+    // Skip guard check for periodic polling, but use it for initial mount
+    if (!skipGuard && hasFetchedInitialOrder.current) return;
+    if (!skipGuard) hasFetchedInitialOrder.current = true;
+
+    try {
+      const response = await authApi.getActiveOrder();
+      if (response.success && response.data) {
+        setActiveOrder(response.data);
       } else {
         setActiveOrder(null);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch active order:', error);
+      setActiveOrder(null);
+    }
+  }, [isAuthenticated]);
 
-    fetchActiveOrder();
-    // Re-fetch every 30 seconds if authenticated
-    const interval = isAuthenticated ? setInterval(fetchActiveOrder, 30000) : null;
+  // Fetch active order when user is authenticated
+  useEffect(() => {
+    // Reset guard when authentication changes
+    hasFetchedInitialOrder.current = false;
+
+    // Initial fetch (with guard)
+    fetchActiveOrder(false);
+
+    // Periodic polling (skip guard for polling)
+    const interval = isAuthenticated ? setInterval(() => fetchActiveOrder(true), 30000) : null;
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchActiveOrder]);
 
   // Get logo URL from branding (handle both object and string formats)
   const getLogoUrl = () => {
