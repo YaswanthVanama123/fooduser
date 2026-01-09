@@ -279,7 +279,7 @@ const Cart: React.FC = () => {
                       {/* Price and Remove */}
                       <div className="flex flex-col items-end space-y-3">
                         <p className="font-bold text-xl" style={{ color: primaryColor }}>
-                          ${item.subtotal.toFixed(2)}
+                          ${(item.subtotal || item.price * item.quantity).toFixed(2)}
                         </p>
                         <button
                           onClick={() => {

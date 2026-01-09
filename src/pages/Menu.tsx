@@ -23,7 +23,7 @@ import { MenuItem as MenuItemType, Category, CartItem, Customization } from '../
 
 const Menu: React.FC = () => {
   const navigate = useNavigate();
-  const { tableId, addToCart } = useCart();
+  const { tableId, addToCart, cart, updateQuantity: updateCartQuantity, removeFromCart } = useCart();
   const { restaurant } = useRestaurant();
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
@@ -127,6 +127,59 @@ const Menu: React.FC = () => {
     setFilteredItems(filtered);
   };
 
+  // Get cart quantity for a specific menu item (without customizations)
+  const getCartQuantity = (menuItemId: string): number => {
+    const cartItem = cart.find(
+      (item) => item.menuItemId === menuItemId &&
+      (!item.customizations || item.customizations.length === 0)
+    );
+    return cartItem ? cartItem.quantity : 0;
+  };
+
+  // Handle quantity change from menu item
+  const handleQuantityChange = (item: MenuItemType, newQuantity: number) => {
+    const existingCartItem = cart.find(
+      (cartItem) => cartItem.menuItemId === item._id &&
+      (!cartItem.customizations || cartItem.customizations.length === 0)
+    );
+
+    if (newQuantity === 0) {
+      // Remove from cart
+      if (existingCartItem) {
+        removeFromCart(existingCartItem.menuItemId);
+        toast.success(`${item.name} removed from cart`);
+      }
+    } else if (existingCartItem) {
+      // Update existing cart item quantity
+      updateCartQuantity(existingCartItem.menuItemId, newQuantity);
+    } else {
+      // Add new item to cart
+      const cartItem: CartItem = {
+        menuItemId: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: newQuantity,
+        subtotal: item.price * newQuantity,
+        image: item.images?.thumbnail || item.image,
+        customizations: [],
+        specialInstructions: '',
+      };
+      addToCart(cartItem);
+      toast.success(
+        <div className="flex items-center space-x-2">
+          <ShoppingBag className="h-5 w-5" />
+          <span>{item.name} added to cart!</span>
+        </div>,
+        {
+          style: {
+            background: restaurant?.branding?.primaryColor || '#6366f1',
+            color: '#fff',
+          },
+        }
+      );
+    }
+  };
+
   const handleItemClick = (item: MenuItemType) => {
     if (!item.isAvailable) {
       toast.error('This item is currently unavailable');
@@ -144,6 +197,24 @@ const Menu: React.FC = () => {
     setCustomizations({});
     setQuantity(1);
     setSpecialInstructions('');
+  };
+
+  const handleQuickAdd = (item: MenuItemType, quantity: number) => {
+    // This is called when "Update" button is clicked
+    // The cart is already updated via handleQuantityChange
+    // Just show a confirmation toast
+    toast.success(
+      <div className="flex items-center space-x-2">
+        <ShoppingBag className="h-5 w-5" />
+        <span>Cart updated!</span>
+      </div>,
+      {
+        style: {
+          background: restaurant?.branding?.primaryColor || '#6366f1',
+          color: '#fff',
+        },
+      }
+    );
   };
 
   const handleCustomizationChange = (optionName: string, value: string | string[], priceModifier: number) => {
@@ -427,7 +498,14 @@ const Menu: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredItems.map((item) => (
-                <MenuItem key={item._id} item={item} onClick={() => handleItemClick(item)} />
+                <MenuItem
+                  key={item._id}
+                  item={item}
+                  onClick={() => handleItemClick(item)}
+                  onQuickAdd={handleQuickAdd}
+                  cartQuantity={getCartQuantity(item._id)}
+                  onQuantityChange={handleQuantityChange}
+                />
               ))}
             </div>
           </>

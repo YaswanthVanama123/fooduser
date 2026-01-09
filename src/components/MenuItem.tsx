@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Wheat, Clock, Star, Sparkles } from 'lucide-react';
+import { Leaf, Wheat, Clock, Star, Sparkles, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { MenuItem as MenuItemType } from '../types';
 import { useRestaurant } from '../context/RestaurantContext';
 import Card from './ui/Card';
@@ -9,9 +9,12 @@ import RatingStars from './ui/RatingStars';
 interface MenuItemProps {
   item: MenuItemType;
   onClick: () => void;
+  onQuickAdd?: (item: MenuItemType, quantity: number) => void;
+  cartQuantity: number;
+  onQuantityChange: (item: MenuItemType, newQuantity: number) => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
+const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuantity, onQuantityChange }) => {
   const { restaurant } = useRestaurant();
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
@@ -33,11 +36,30 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
 
   const imageUrl = getImageUrl(item);
 
+  const hasCustomizations = item.customizationOptions && item.customizationOptions.length > 0;
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onQuickAdd && item.isAvailable && cartQuantity > 0) {
+      onQuickAdd(item, cartQuantity);
+    }
+  };
+
+  const handleQuantityChange = (e: React.MouseEvent, delta: number) => {
+    e.stopPropagation();
+    const newQuantity = Math.max(0, cartQuantity + delta);
+    onQuantityChange(item, newQuantity);
+  };
+
+  const handleCardClick = () => {
+    if (item.isAvailable) {
+      onClick();
+    }
+  };
+
   return (
     <Card
-      hover
-      onClick={item.isAvailable ? onClick : undefined}
-      className="overflow-hidden group transition-all duration-300"
+      className="overflow-hidden group transition-all duration-300 flex flex-col"
     >
       {/* Image Section */}
       <div className="relative h-48 sm:h-56 bg-gray-100 overflow-hidden">
@@ -95,7 +117,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
       </div>
 
       {/* Content Section */}
-      <div className="p-4 sm:p-5">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col cursor-pointer" onClick={handleCardClick}>
         {/* Title */}
         <h3 className="font-semibold text-lg sm:text-xl text-gray-900 mb-2 line-clamp-1 transition-all">
           {item.name}
@@ -121,7 +143,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
         )}
 
         {/* Price and Time Row */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-200">
           <div>
             <div
               className="text-xl sm:text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r"
@@ -131,7 +153,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
             >
               {formatPrice(item.price)}
             </div>
-            {item.customizationOptions && item.customizationOptions.length > 0 && (
+            {hasCustomizations && (
               <p className="text-xs text-gray-500 mt-1 flex items-center">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Customizable
@@ -147,6 +169,75 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
           )}
         </div>
       </div>
+
+      {/* Quick Add to Cart Section */}
+      {item.isAvailable && (
+        <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+          {cartQuantity > 0 ? (
+            // Show quantity controls when item is in cart
+            <div className="flex items-center justify-between gap-3">
+              {/* Quantity Controls */}
+              <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                <button
+                  onClick={(e) => handleQuantityChange(e, -1)}
+                  className="p-2 hover:bg-gray-100 transition-colors"
+                  style={{ color: primaryColor }}
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="px-4 py-2 font-semibold text-gray-900 min-w-[40px] text-center">
+                  {cartQuantity}
+                </span>
+                <button
+                  onClick={(e) => handleQuantityChange(e, 1)}
+                  className="p-2 hover:bg-gray-100 transition-colors"
+                  style={{ color: primaryColor }}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Update Cart Button */}
+              <button
+                onClick={handleQuickAdd}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white font-semibold transition-all hover:shadow-md"
+                style={{
+                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                <span className="hidden sm:inline">Update</span>
+              </button>
+            </div>
+          ) : (
+            // Show simple Add button when item not in cart
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuantityChange(item, 1);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white font-semibold transition-all hover:shadow-md"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span>Add</span>
+            </button>
+          )}
+
+          {/* View Details Link */}
+          {hasCustomizations && (
+            <button
+              onClick={handleCardClick}
+              className="w-full mt-2 text-xs text-center py-1 hover:underline transition-colors"
+              style={{ color: primaryColor }}
+            >
+              Click for customization options
+            </button>
+          )}
+        </div>
+      )}
     </Card>
   );
 };

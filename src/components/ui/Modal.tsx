@@ -30,15 +30,15 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity backdrop-blur-sm"
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity backdrop-blur-sm z-[9999]"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-4 relative z-[9999]">
         <div
           className={`relative bg-white rounded-2xl shadow-xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden transform transition-all`}
           onClick={(e) => e.stopPropagation()}

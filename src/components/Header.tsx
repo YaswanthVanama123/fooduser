@@ -103,12 +103,13 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header
-      className="sticky top-0 z-50 shadow-lg backdrop-blur-lg bg-opacity-90"
-      style={{
-        background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-      }}
-    >
+    <>
+      <header
+        className="sticky top-0 z-50 shadow-lg backdrop-blur-lg bg-opacity-90"
+        style={{
+          background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+        }}
+      >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Left Section - Back Button or Logo */}
@@ -283,15 +284,16 @@ const Header: React.FC = () => {
           />
         </div>
       )}
+    </header>
 
-      {/* Simple Auth Modal */}
+      {/* Simple Auth Modal - Rendered outside header for proper z-index */}
       <SimpleAuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onLogin={login}
         onRegister={register}
       />
-    </header>
+    </>
   );
 };
 
