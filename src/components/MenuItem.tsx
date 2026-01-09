@@ -4,6 +4,7 @@ import { MenuItem as MenuItemType } from '../types';
 import { useRestaurant } from '../context/RestaurantContext';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
+import RatingStars from './ui/RatingStars';
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -90,6 +91,18 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
         <h3 className="font-bold text-xl text-gray-900 mb-2 line-clamp-1">
           {item.name}
         </h3>
+
+        {/* Ratings */}
+        {item.averageRating !== undefined && item.totalReviews !== undefined && item.totalReviews > 0 && (
+          <div className="mb-3">
+            <RatingStars
+              rating={item.averageRating}
+              size="sm"
+              showCount={true}
+              count={item.totalReviews}
+            />
+          </div>
+        )}
 
         {/* Description */}
         {item.description && (

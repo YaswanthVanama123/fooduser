@@ -7,10 +7,9 @@ import { useRestaurant } from '../context/RestaurantContext';
 
 interface Review {
   _id: string;
-  user: {
+  customerId: {
     _id: string;
-    firstName: string;
-    lastName: string;
+    username: string;
   };
   rating: number;
   comment: string;
@@ -88,7 +87,9 @@ const ReviewList: React.FC<ReviewListProps> = ({
   return (
     <div className="space-y-6">
       {reviews.map((review) => {
-        const isOwnReview = currentUserId === review.user._id;
+        const isOwnReview = currentUserId === review.customerId._id;
+        const username = review.customerId.username;
+        const initials = username.substring(0, 2).toUpperCase();
 
         return (
           <div
@@ -101,12 +102,11 @@ const ReviewList: React.FC<ReviewListProps> = ({
                   className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  {review.user.firstName.charAt(0)}
-                  {review.user.lastName.charAt(0)}
+                  {initials}
                 </div>
                 <div>
                   <h4 className="text-base font-semibold text-gray-900">
-                    {review.user.firstName} {review.user.lastName}
+                    {username}
                     {isOwnReview && (
                       <Badge variant="info" className="ml-2">
                         You

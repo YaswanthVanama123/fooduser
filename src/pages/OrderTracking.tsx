@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, ChefHat, AlertCircle, PackageCheck, Home, Wifi, WifiOff, Users, Star } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
@@ -14,6 +15,7 @@ import Badge from '../components/ui/Badge';
 import { useSocket } from '../context/SocketContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { ordersApi } from '../api';
+import reviewsApi from '../api/reviews.api';
 import { Order, OrderStatus } from '../types';
 import socketService from '../services/socket';
 
@@ -28,6 +30,7 @@ const OrderTracking: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [reviewingItemIndex, setReviewingItemIndex] = useState<number | null>(null);
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
@@ -162,21 +165,34 @@ const OrderTracking: React.FC = () => {
 
   const handleReviewSubmit = async (data: { rating: number; comment: string }) => {
     try {
-      // Here you would typically call your reviews API
-      // For now, we'll just simulate a successful submission
-      console.log('Review submitted:', { orderId, ...data });
+      if (reviewingItemIndex === null || !order) {
+        throw new Error('No item selected for review');
+      }
 
-      // You can add an API call here when the reviews endpoint is ready
-      // await reviewsApi.create({ orderId: orderId!, ...data });
+      const item = order.items[reviewingItemIndex];
+      const menuItemId = typeof item.menuItemId === 'object' ? item.menuItemId._id : item.menuItemId;
+
+      await reviewsApi.createReview({
+        menuItemId,
+        orderId: orderId!,
+        rating: data.rating,
+        comment: data.comment,
+      });
 
       setHasSubmittedReview(true);
       setShowReviewForm(false);
+      setReviewingItemIndex(null);
 
-      // Optional: Show a success message
-      alert('Thank you for your review!');
+      toast.success('Thank you for your review!', {
+        style: {
+          background: primaryColor,
+          color: '#fff',
+        },
+      });
     } catch (err: any) {
       console.error('Error submitting review:', err);
-      throw new Error(err.response?.data?.message || 'Failed to submit review');
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+      throw err;
     }
   };
 
@@ -501,28 +517,70 @@ const OrderTracking: React.FC = () => {
 
             <CardBody className="p-6">
               {!showReviewForm ? (
-                <div className="text-center py-6">
-                  <p className="text-gray-700 mb-6 text-lg">
-                    Your feedback helps us serve you better. Share your experience with us!
+                <div className="space-y-4">
+                  <p className="text-gray-700 mb-4 text-center">
+                    Your feedback helps us serve you better. Rate the items you ordered!
                   </p>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => setShowReviewForm(true)}
-                    style={{
-                      background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-                    }}
-                  >
-                    <Star className="h-5 w-5 mr-2" />
-                    Write a Review
-                  </Button>
+                  <div className="grid gap-3">
+                    {order.items.map((item, index) => {
+                      const menuItem = typeof item.menuItemId === 'object' ? item.menuItemId : null;
+                      const itemName = menuItem?.name || item.name;
+                      const itemImage = menuItem?.image;
+
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3">
+                            {itemImage && (
+                              <img
+                                src={itemImage}
+                                alt={itemName}
+                                className="w-12 h-12 rounded object-cover"
+                              />
+                            )}
+                            <div>
+                              <p className="font-medium text-gray-900">{itemName}</p>
+                              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => {
+                              setReviewingItemIndex(index);
+                              setShowReviewForm(true);
+                            }}
+                            style={{
+                              background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+                            }}
+                          >
+                            <Star className="h-4 w-4 mr-1" />
+                            Rate Item
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <ReviewForm
-                  menuItemId={orderId || ''}
-                  menuItemName={`Order #${order.orderNumber}`}
+                  menuItemId={reviewingItemIndex !== null && order.items[reviewingItemIndex]
+                    ? (typeof order.items[reviewingItemIndex].menuItemId === 'object'
+                      ? order.items[reviewingItemIndex].menuItemId._id
+                      : order.items[reviewingItemIndex].menuItemId)
+                    : ''}
+                  menuItemName={reviewingItemIndex !== null && order.items[reviewingItemIndex]
+                    ? (typeof order.items[reviewingItemIndex].menuItemId === 'object'
+                      ? order.items[reviewingItemIndex].menuItemId.name
+                      : order.items[reviewingItemIndex].name)
+                    : 'Item'}
                   onSubmit={handleReviewSubmit}
-                  onCancel={() => setShowReviewForm(false)}
+                  onCancel={() => {
+                    setShowReviewForm(false);
+                    setReviewingItemIndex(null);
+                  }}
                 />
               )}
             </CardBody>

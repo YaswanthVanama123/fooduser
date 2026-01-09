@@ -9,7 +9,7 @@ import Badge from '../components/ui/Badge';
 import { useUser } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
-import authApi from '../api/auth.api';
+import favoritesApi from '../api/favorites.api';
 
 interface MenuItem {
   _id: string;
@@ -50,10 +50,12 @@ const Favorites: React.FC = () => {
   const fetchFavorites = async () => {
     try {
       setIsLoading(true);
-      const response = await authApi.getFavorites();
+      const response = await favoritesApi.getFavorites();
 
       if (response.success) {
-        setFavorites(response.data);
+        // Extract menu items from favorites
+        const menuItems = response.data.map((fav: any) => fav.menuItemId);
+        setFavorites(menuItems);
       }
     } catch (error: any) {
       console.error('Failed to fetch favorites:', error);
@@ -66,7 +68,7 @@ const Favorites: React.FC = () => {
   const handleRemoveFavorite = async (itemId: string) => {
     try {
       setRemovingId(itemId);
-      const response = await authApi.removeFavorite(itemId);
+      const response = await favoritesApi.removeFavorite(itemId);
 
       if (response.success) {
         setFavorites(favorites.filter((item) => item._id !== itemId));

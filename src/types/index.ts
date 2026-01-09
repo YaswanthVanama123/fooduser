@@ -37,6 +37,8 @@ export interface MenuItem {
   isGlutenFree: boolean;
   customizationOptions?: Customization[];
   preparationTime?: number;
+  averageRating?: number;
+  totalReviews?: number;
 }
 
 export interface Table {

@@ -204,9 +204,17 @@ const TableSelection: React.FC = () => {
               <div className="mb-8 flex justify-center">
                 <div className="bg-white p-6 rounded-3xl shadow-2xl transform hover:scale-105 transition-transform">
                   <img
-                    src={restaurant.branding.logo}
+                    src={
+                      restaurant.branding.logo.startsWith('http')
+                        ? restaurant.branding.logo
+                        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${restaurant.branding.logo}`
+                    }
                     alt={restaurant.name}
                     className="h-24 w-24 object-contain"
+                    onError={(e) => {
+                      console.error('Logo failed to load:', restaurant.branding.logo);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, ClipboardList, Clock, Star, Settings } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
@@ -224,6 +224,32 @@ const Header: React.FC = () => {
 
                     {/* Menu Items */}
                     <div className="py-2">
+                      <button
+                        onClick={() => handleMenuClick('/order-history')}
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                      >
+                        <Clock className="h-5 w-5 text-indigo-600" />
+                        <span className="text-sm font-medium text-gray-900">Order History</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleMenuClick('/favorites')}
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                      >
+                        <Star className="h-5 w-5 text-indigo-600" />
+                        <span className="text-sm font-medium text-gray-900">My Favorites</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleMenuClick('/profile')}
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left"
+                      >
+                        <Settings className="h-5 w-5 text-indigo-600" />
+                        <span className="text-sm font-medium text-gray-900">Settings</span>
+                      </button>
+
+                      <div className="my-2 border-t border-gray-200"></div>
+
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-red-50 transition-colors text-left"

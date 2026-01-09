@@ -22,12 +22,13 @@ import { useRestaurant } from '../context/RestaurantContext';
 import authApi from '../api/auth.api';
 
 interface OrderItem {
-  menuItem: {
+  menuItemId: string | {
     _id: string;
     name: string;
     price: number;
     image?: string;
   };
+  name: string;
   quantity: number;
   specialInstructions?: string;
   price: number;
@@ -38,7 +39,7 @@ interface Order {
   orderNumber: string;
   status: string;
   items: OrderItem[];
-  totalAmount: number;
+  total: number;
   tableNumber?: string;
   createdAt: string;
   updatedAt: string;
@@ -269,35 +270,42 @@ const OrderHistory: React.FC = () => {
                       Order Items ({order.items.length})
                     </h4>
                     <div className="space-y-2">
-                      {order.items.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between text-sm"
-                        >
-                          <div className="flex items-center space-x-3">
-                            {item.menuItem.image && (
-                              <img
-                                src={item.menuItem.image}
-                                alt={item.menuItem.name}
-                                className="w-10 h-10 rounded object-cover"
-                              />
-                            )}
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {item.quantity}x {item.menuItem.name}
-                              </p>
-                              {item.specialInstructions && (
-                                <p className="text-xs text-gray-500">
-                                  Note: {item.specialInstructions}
-                                </p>
+                      {order.items.map((item, index) => {
+                        // Handle both populated and unpopulated menuItemId
+                        const menuItem = typeof item.menuItemId === 'object' ? item.menuItemId : null;
+                        const itemName = menuItem?.name || item.name || 'Unknown Item';
+                        const itemImage = menuItem?.image;
+
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="flex items-center space-x-3">
+                              {itemImage && (
+                                <img
+                                  src={itemImage}
+                                  alt={itemName}
+                                  className="w-10 h-10 rounded object-cover"
+                                />
                               )}
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {item.quantity}x {itemName}
+                                </p>
+                                {item.specialInstructions && (
+                                  <p className="text-xs text-gray-500">
+                                    Note: {item.specialInstructions}
+                                  </p>
+                                )}
+                              </div>
                             </div>
+                            <p className="font-semibold text-gray-900">
+                              ${(item.price || 0).toFixed(2)}
+                            </p>
                           </div>
-                          <p className="font-semibold text-gray-900">
-                            ${item.price.toFixed(2)}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -307,7 +315,7 @@ const OrderHistory: React.FC = () => {
                       <DollarSign className="h-5 w-5 text-gray-600" />
                       <span className="text-sm text-gray-600">Total:</span>
                       <span className="text-xl font-bold text-gray-900">
-                        ${order.totalAmount.toFixed(2)}
+                        ${(order.total || 0).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex items-center space-x-3">

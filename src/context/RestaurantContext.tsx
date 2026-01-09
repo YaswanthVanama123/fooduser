@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { extractSubdomain } from '../utils/subdomain';
 import { restaurantApi } from '../api';
 
@@ -36,9 +36,17 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subdomain, setSubdomain] = useState<string | null>(null);
+  const isFetchingRef = useRef(false); // Prevent concurrent fetches
 
-  const fetchRestaurant = async () => {
+  const fetchRestaurant = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('Restaurant fetch already in progress, skipping...');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -60,10 +68,13 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           _id: response.data.restaurantId,
           subdomain: response.data.subdomain,
           name: response.data.name,
-          branding: response.data.branding || {
-            primaryColor: '#6366f1',
-            secondaryColor: '#8b5cf6',
-            theme: 'light',
+          branding: {
+            logo: response.data.logo?.original || response.data.logo?.medium || response.data.branding?.logo,
+            primaryColor: response.data.branding?.primaryColor || '#6366f1',
+            secondaryColor: response.data.branding?.secondaryColor || '#8b5cf6',
+            accentColor: response.data.branding?.accentColor || '#ec4899',
+            fontFamily: response.data.branding?.fontFamily || 'Inter',
+            theme: response.data.branding?.theme || 'light',
           },
           isActive: true,
         };
@@ -82,8 +93,9 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setError(err.response?.data?.message || 'Failed to load restaurant information');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
   const applyBranding = (branding: RestaurantBranding) => {
     const root = document.documentElement;
@@ -107,11 +119,11 @@ export const RestaurantProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     fetchRestaurant();
-  }, []);
+  }, []); // Empty dependency array - only run on mount
 
-  const refreshRestaurant = async () => {
+  const refreshRestaurant = useCallback(async () => {
     await fetchRestaurant();
-  };
+  }, [fetchRestaurant]);
 
   return (
     <RestaurantContext.Provider

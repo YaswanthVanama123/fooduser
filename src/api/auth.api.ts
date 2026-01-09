@@ -19,6 +19,18 @@ const authApi = {
     const response = await apiClient.get('/customers/auth/active-order');
     return response.data;
   },
+
+  // Get customer's order history
+  getOrderHistory: async (params?: { page?: number; limit?: number; status?: string }) => {
+    const response = await apiClient.get('/customers/orders', { params });
+    return response.data;
+  },
+
+  // Reorder from a previous order
+  reorder: async (orderId: string) => {
+    const response = await apiClient.post(`/customers/orders/${orderId}/reorder`);
+    return response.data;
+  },
 };
 
 export default authApi;
