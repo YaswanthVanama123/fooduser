@@ -37,13 +37,24 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkAuth = async () => {
     try {
       const cachedUser = localStorage.getItem('customer');
-      if (cachedUser) {
+      const token = localStorage.getItem('customerToken');
+
+      if (cachedUser && token) {
         const userData = JSON.parse(cachedUser);
         setUser(userData);
+      } else {
+        // Clear incomplete auth data
+        localStorage.removeItem('customer');
+        localStorage.removeItem('customerToken');
+        localStorage.removeItem('customerId');
+        localStorage.removeItem('customerUsername');
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('customer');
+      localStorage.removeItem('customerToken');
+      localStorage.removeItem('customerId');
+      localStorage.removeItem('customerUsername');
     } finally {
       setIsLoading(false);
     }
@@ -55,10 +66,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authApi.login({ username });
 
       if (response.success) {
-        const { customer } = response.data;
+        const { customer, token } = response.data;
 
-        // Save user data (no token needed)
+        // Save user data and JWT token
         localStorage.setItem('customer', JSON.stringify(customer));
+        localStorage.setItem('customerToken', token);
         localStorage.setItem('customerId', customer._id);
         localStorage.setItem('customerUsername', customer.username);
 
@@ -78,10 +90,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authApi.register({ username });
 
       if (response.success) {
-        const { customer } = response.data;
+        const { customer, token } = response.data;
 
-        // Save user data (no token needed)
+        // Save user data and JWT token
         localStorage.setItem('customer', JSON.stringify(customer));
+        localStorage.setItem('customerToken', token);
         localStorage.setItem('customerId', customer._id);
         localStorage.setItem('customerUsername', customer.username);
 
@@ -98,6 +111,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Logout
   const logout = () => {
     localStorage.removeItem('customer');
+    localStorage.removeItem('customerToken');
     localStorage.removeItem('customerId');
     localStorage.removeItem('customerUsername');
     setUser(null);

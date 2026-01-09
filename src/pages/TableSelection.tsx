@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Users, MapPin, Armchair, Lightbulb, CheckCircle, Check } from 'lucide-react';
+import { Users, MapPin, Armchair, Lightbulb, CheckCircle, Check, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useSocket } from '../context/SocketContext';
+import { useUser } from '../context/UserContext';
 import { useTables } from '../hooks';
 import { Table } from '../types';
 import SEO from '../components/SEO';
@@ -14,14 +15,19 @@ import ErrorMessage from '../components/ErrorMessage';
 import Card, { CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import SimpleAuthModal from '../components/SimpleAuthModal';
+import authApi from '../api/auth.api';
 
 const TableSelection: React.FC = () => {
   const navigate = useNavigate();
   const { setTable } = useCart();
   const { restaurant, loading: restaurantLoading, error: restaurantError } = useRestaurant();
   const { connectToRestaurant } = useSocket();
+  const { isAuthenticated, user, login, register } = useUser();
   const { tables, loading, error, refetch } = useTables();
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [activeOrder, setActiveOrder] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     if (restaurant) {
@@ -29,7 +35,55 @@ const TableSelection: React.FC = () => {
     }
   }, [restaurant]);
 
+  // Fetch active order when user is authenticated
+  useEffect(() => {
+    const fetchActiveOrder = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await authApi.getActiveOrder();
+          if (response.success && response.data) {
+            setActiveOrder(response.data);
+            // Show notification that user has an active order
+            toast.success(`You have an active order at Table ${response.data.tableNumber}!`, {
+              style: {
+                background: restaurant?.branding?.primaryColor || '#6366f1',
+                color: '#fff',
+              },
+              duration: 5000,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch active order:', error);
+        }
+      }
+    };
+
+    fetchActiveOrder();
+  }, [isAuthenticated, restaurant]);
+
   const handleTableSelect = (table: Table) => {
+    // Check if user has an active order for this table
+    if (activeOrder && activeOrder.tableId._id === table._id) {
+      // User has an active order for this table - take them to order tracking
+      toast.success(`Viewing your order from Table ${table.tableNumber}!`, {
+        style: {
+          background: restaurant?.branding?.primaryColor || '#6366f1',
+          color: '#fff',
+        },
+      });
+      navigate(`/order/${activeOrder._id}`);
+      return;
+    }
+
+    // Check if table is occupied by someone else
+    if (table.isOccupied) {
+      toast.error('This table is currently occupied', {
+        icon: '🚫',
+      });
+      return;
+    }
+
+    // Normal table selection for menu browsing
     setSelectedTableId(table._id);
     setTable(table._id, table.tableNumber);
     toast.success(`Table ${table.tableNumber} selected!`, {
@@ -140,10 +194,10 @@ const TableSelection: React.FC = () => {
           background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
         }}
       >
-        <div className="absolute inset-0 bg-black bg-opacity-10" />
-        <div className="absolute inset-0 bg-grid-white/[0.05]" />
+        <div className="absolute inset-0 bg-black bg-opacity-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid-white/[0.05] pointer-events-none" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 z-10">
           <div className="text-center">
             {/* Logo */}
             {restaurant?.branding?.logo && (
@@ -175,11 +229,54 @@ const TableSelection: React.FC = () => {
                 Please select your table to begin
               </span>
             </div>
+
+            {/* Login Button - Show when not authenticated */}
+            {!isAuthenticated && (
+              <div className="mt-6 relative z-50">
+                <button
+                  onClick={() => {
+                    console.log('Login button clicked!');
+                    setShowAuthModal(true);
+                  }}
+                  className="inline-flex items-center space-x-2 bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
+                  type="button"
+                >
+                  <LogIn className="h-5 w-5" />
+                  <span>Already have an order? Login here</span>
+                </button>
+              </div>
+            )}
+
+            {/* Active Order Info - Show when authenticated and has order */}
+            {isAuthenticated && activeOrder && (
+              <div className="mt-6 relative z-50">
+                <button
+                  onClick={() => navigate(`/order/${activeOrder._id}`)}
+                  className="inline-flex items-center space-x-2 bg-green-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-600 transition-all shadow-lg hover:shadow-xl hover:scale-105 animate-pulse cursor-pointer"
+                  type="button"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <span>View Your Active Order (Table {activeOrder.tableNumber})</span>
+                </button>
+              </div>
+            )}
+
+            {/* Logged In Info - Show when authenticated but no active order */}
+            {isAuthenticated && !activeOrder && (
+              <div className="mt-6 relative z-50">
+                <div className="inline-flex items-center space-x-2 bg-white bg-opacity-20 backdrop-blur-lg px-6 py-3 rounded-xl border-2 border-white border-opacity-30">
+                  <CheckCircle className="h-5 w-5 text-white" />
+                  <span className="text-white font-medium">
+                    Welcome back, {user?.username}!
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
           <svg
             viewBox="0 0 1440 120"
             fill="none"
@@ -232,77 +329,89 @@ const TableSelection: React.FC = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-            {tables.map((table) => (
-              <Card
-                key={table._id}
-                hover={!table.isOccupied}
-                onClick={() => !table.isOccupied && handleTableSelect(table)}
-                className={`relative ${
-                  table.isOccupied ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-                } ${
-                  selectedTableId === table._id ? 'ring-4 ring-offset-2' : ''
-                }`}
-                style={{
-                  ringColor: selectedTableId === table._id ? primaryColor : 'transparent',
-                }}
-              >
-                <CardBody className="p-8 text-center">
-                  {/* Table Icon */}
-                  <div
-                    className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
-                    style={{
-                      background: table.isOccupied
-                        ? '#E5E7EB'
-                        : `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-                    }}
-                  >
-                    <Users className={`h-10 w-10 ${table.isOccupied ? 'text-gray-400' : 'text-white'}`} />
-                  </div>
+            {tables.map((table) => {
+              // Check if this table has user's active order
+              const isUserTable = activeOrder && activeOrder.tableId._id === table._id;
+              const isClickable = !table.isOccupied || isUserTable;
 
-                  {/* Table Number */}
-                  <div className="text-3xl font-bold text-gray-900 mb-2">
-                    Table {table.tableNumber}
-                  </div>
-
-                  {/* Capacity */}
-                  <div className="flex items-center justify-center space-x-2 text-gray-600 mb-3">
-                    <Users className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {table.capacity} {table.capacity === 1 ? 'Guest' : 'Guests'}
-                    </span>
-                  </div>
-
-                  {/* Location */}
-                  {table.location && (
-                    <div className="flex items-center justify-center space-x-1 text-gray-500">
-                      <MapPin className="h-3 w-3" />
-                      <span className="text-xs">{table.location}</span>
+              return (
+                <Card
+                  key={table._id}
+                  hover={isClickable}
+                  onClick={() => handleTableSelect(table)}
+                  className={`relative ${
+                    isClickable ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'
+                  } ${
+                    selectedTableId === table._id ? 'ring-4 ring-offset-2' : ''
+                  }`}
+                  style={{
+                    ringColor: selectedTableId === table._id ? primaryColor : 'transparent',
+                  }}
+                >
+                  <CardBody className="p-8 text-center">
+                    {/* Table Icon */}
+                    <div
+                      className="mx-auto w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
+                      style={{
+                        background: table.isOccupied && !isUserTable
+                          ? '#E5E7EB'
+                          : `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
+                      }}
+                    >
+                      <Users className={`h-10 w-10 ${table.isOccupied && !isUserTable ? 'text-gray-400' : 'text-white'}`} />
                     </div>
-                  )}
 
-                  {/* Occupied Badge */}
-                  {table.isOccupied && (
-                    <div className="absolute top-3 right-3">
-                      <Badge variant="danger" size="sm">
-                        Occupied
-                      </Badge>
+                    {/* Table Number */}
+                    <div className="text-3xl font-bold text-gray-900 mb-2">
+                      Table {table.tableNumber}
                     </div>
-                  )}
 
-                  {/* Selected Checkmark */}
-                  {selectedTableId === table._id && (
-                    <div className="absolute top-3 left-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg"
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        <Check className="h-5 w-5" />
+                    {/* Capacity */}
+                    <div className="flex items-center justify-center space-x-2 text-gray-600 mb-3">
+                      <Users className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {table.capacity} {table.capacity === 1 ? 'Guest' : 'Guests'}
+                      </span>
+                    </div>
+
+                    {/* Location */}
+                    {table.location && (
+                      <div className="flex items-center justify-center space-x-1 text-gray-500">
+                        <MapPin className="h-3 w-3" />
+                        <span className="text-xs">{table.location}</span>
                       </div>
-                    </div>
-                  )}
-                </CardBody>
-              </Card>
-            ))}
+                    )}
+
+                    {/* Occupied Badge or Your Order Badge */}
+                    {table.isOccupied && (
+                      <div className="absolute top-3 right-3">
+                        {isUserTable ? (
+                          <Badge variant="success" size="sm">
+                            Your Order
+                          </Badge>
+                        ) : (
+                          <Badge variant="danger" size="sm">
+                            Occupied
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Selected Checkmark */}
+                    {selectedTableId === table._id && (
+                      <div className="absolute top-3 left-3">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          <Check className="h-5 w-5" />
+                        </div>
+                      </div>
+                    )}
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         )}
 
@@ -344,6 +453,14 @@ const TableSelection: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Simple Auth Modal */}
+      <SimpleAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onLogin={login}
+        onRegister={register}
+      />
     </div>
   );
 };

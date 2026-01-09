@@ -29,7 +29,13 @@ class SocketService {
 
     console.log(`Connecting to Socket.io namespace: ${namespace}`);
 
+    // Get customer token from localStorage
+    const token = localStorage.getItem('customerToken');
+
     this.socket = io(`${SOCKET_BASE_URL}${namespace}`, {
+      auth: {
+        token: token || '',
+      },
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,

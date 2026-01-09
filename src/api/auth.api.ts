@@ -13,6 +13,12 @@ const authApi = {
     const response = await apiClient.post('/customers/auth/login', data);
     return response.data;
   },
+
+  // Get customer's active order
+  getActiveOrder: async () => {
+    const response = await apiClient.get('/customers/auth/active-order');
+    return response.data;
+  },
 };
 
 export default authApi;

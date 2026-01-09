@@ -16,7 +16,7 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor - Add restaurantId and subdomain headers for multi-tenant support
+// Request interceptor - Add restaurantId, subdomain, and auth token headers
 apiClient.interceptors.request.use(
   (config) => {
     const { subdomain } = extractSubdomain();
@@ -30,6 +30,12 @@ apiClient.interceptors.request.use(
     // Add subdomain header for tenant identification
     if (subdomain) {
       config.headers['x-subdomain'] = subdomain;
+    }
+
+    // Add JWT token for authenticated requests
+    const token = localStorage.getItem('customerToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
 
     return config;
@@ -48,7 +54,23 @@ apiClient.interceptors.response.use(
     } else if (error.response?.status === 500) {
       console.error('Server error:', error.response.data);
     } else if (error.response?.status === 401) {
-      console.error('Unauthorized access');
+      // Only clear auth if it's an actual token expiry/invalid error
+      // Don't clear on network errors or backend downtime
+      const errorMessage = error.response?.data?.message || '';
+      if (errorMessage.includes('token') || errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+        console.error('Token expired or invalid - clearing auth');
+        localStorage.removeItem('customerToken');
+        localStorage.removeItem('customer');
+        localStorage.removeItem('customerId');
+        localStorage.removeItem('customerUsername');
+        // Optionally redirect to login or show a message
+      } else {
+        console.warn('Received 401 but not clearing auth - might be temporary server issue');
+      }
+    } else if (!error.response) {
+      // Network error - backend is down or unreachable
+      console.warn('Network error - backend may be restarting or unreachable');
+      // Don't clear auth data - keep user logged in
     }
     return Promise.reject(error);
   }

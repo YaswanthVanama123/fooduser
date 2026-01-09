@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut } from 'lucide-react';
+import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, ClipboardList } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
 import SimpleAuthModal from './SimpleAuthModal';
 import Badge from './ui/Badge';
+import authApi from '../api/auth.api';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -15,15 +16,56 @@ const Header: React.FC = () => {
   const { user, isAuthenticated, login, register, logout } = useUser();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isHomePage = location.pathname === '/';
   const isMenuPage = location.pathname === '/menu';
   const isCartPage = location.pathname === '/cart';
+  const isOrderTrackingPage = location.pathname.startsWith('/order/');
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
+
+  // Fetch active order when user is authenticated
+  useEffect(() => {
+    const fetchActiveOrder = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await authApi.getActiveOrder();
+          if (response.success && response.data) {
+            setActiveOrder(response.data);
+          } else {
+            setActiveOrder(null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch active order:', error);
+          setActiveOrder(null);
+        }
+      } else {
+        setActiveOrder(null);
+      }
+    };
+
+    fetchActiveOrder();
+    // Re-fetch every 30 seconds if authenticated
+    const interval = isAuthenticated ? setInterval(fetchActiveOrder, 30000) : null;
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
+  // Get logo URL from branding (handle both object and string formats)
+  const getLogoUrl = () => {
+    const logo = restaurant?.branding?.logo;
+    if (!logo) return null;
+    // If logo is an object, use the original URL, otherwise use as string
+    return typeof logo === 'object' ? logo.original : logo;
+  };
+
+  const logoUrl = getLogoUrl();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -86,10 +128,10 @@ const Header: React.FC = () => {
               className="flex items-center space-x-3 cursor-pointer group"
               onClick={() => !isHomePage && navigate('/menu')}
             >
-              {restaurant?.branding?.logo ? (
+              {logoUrl ? (
                 <div className="h-14 w-14 rounded-xl bg-white p-2 shadow-lg group-hover:scale-110 transition-transform">
                   <img
-                    src={restaurant.branding.logo}
+                    src={logoUrl}
                     alt={restaurant.name}
                     className="h-full w-full object-contain"
                   />
@@ -124,6 +166,17 @@ const Header: React.FC = () => {
               >
                 <Home className="h-5 w-5" />
                 <span>Menu</span>
+              </button>
+            )}
+
+            {/* Track Order Button - Show when user has active order and not already on tracking page */}
+            {isAuthenticated && activeOrder && !isOrderTrackingPage && (
+              <button
+                onClick={() => navigate(`/order/${activeOrder._id}`)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium animate-pulse"
+              >
+                <ClipboardList className="h-5 w-5" />
+                <span className="hidden sm:inline">Track Order</span>
               </button>
             )}
 
