@@ -24,6 +24,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { useCart } from '../context/CartContext';
 import authApi from '../api/auth.api';
 import { ordersApi } from '../api';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface OrderItem {
   menuItemId: string | {
@@ -395,9 +396,15 @@ const OrderHistory: React.FC = () => {
                             <div className="flex items-center space-x-3">
                               {itemImage && (
                                 <img
-                                  src={itemImage}
+                                  src={getImageUrl(itemImage)}
                                   alt={itemName}
                                   className="w-10 h-10 rounded object-cover"
+                                  onError={(e) => {
+                                    // Fallback to placeholder if image fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder-food.jpg';
+                                    target.onerror = null; // Prevent infinite loop
+                                  }}
                                 />
                               )}
                               <div>

@@ -20,6 +20,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { ordersApi } from '../api';
 import reviewsApi from '../api/reviews.api';
 import { Order, OrderStatus } from '../types';
+import { getImageUrl } from '../utils/imageUrl';
 
 const OrderTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -419,9 +420,15 @@ const OrderTracking: React.FC = () => {
                   >
                     {item.menuItemId?.image && (
                       <img
-                        src={item.menuItemId.image}
+                        src={getImageUrl(item.menuItemId.image)}
                         alt={item.name}
                         className="w-20 h-20 rounded-lg object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-food.jpg';
+                          target.onerror = null; // Prevent infinite loop
+                        }}
                       />
                     )}
                     <div className="flex-1">

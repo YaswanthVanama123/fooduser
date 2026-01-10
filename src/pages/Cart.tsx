@@ -16,6 +16,7 @@ import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
 import { ordersApi } from '../api';
+import { getImageUrl } from '../utils/imageUrl';
 
 const Cart: React.FC = () => {
   const navigate = useNavigate();
@@ -219,9 +220,15 @@ const Cart: React.FC = () => {
                       {item.image && (
                         <div className="flex-shrink-0">
                           <img
-                            src={item.image}
+                            src={getImageUrl(item.image)}
                             alt={item.name}
                             className="w-24 h-24 rounded-lg object-cover shadow-md"
+                            onError={(e) => {
+                              // Fallback to placeholder if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-food.jpg';
+                              target.onerror = null; // Prevent infinite loop
+                            }}
                           />
                         </div>
                       )}
