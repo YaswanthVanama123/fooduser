@@ -18,6 +18,15 @@ export interface Customization {
   options: CustomizationOption[];
 }
 
+export interface AddOn {
+  _id: string;
+  name: string;
+  description?: string;
+  price: number;
+  isAvailable: boolean;
+  displayOrder: number;
+}
+
 export interface MenuItem {
   _id: string;
   name: string;
@@ -38,6 +47,7 @@ export interface MenuItem {
   isGlutenFree: boolean;
   isNonVeg?: boolean;
   customizationOptions?: Customization[];
+  addOns?: AddOn[]; // Populated from backend
   preparationTime?: number;
   averageRating?: number;
   totalReviews?: number;
@@ -58,12 +68,18 @@ export interface OrderCustomization {
   priceModifier: number;
 }
 
+export interface OrderAddOn {
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   menuItemId: string;
   name: string;
   price: number;
   quantity: number;
   customizations?: OrderCustomization[];
+  addOns?: OrderAddOn[];
   subtotal: number;
   specialInstructions?: string;
 }

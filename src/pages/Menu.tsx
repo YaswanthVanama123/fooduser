@@ -59,6 +59,7 @@ const Menu: React.FC = () => {
   // Item Modal State
   const [selectedItem, setSelectedItem] = useState<MenuItemType | null>(null);
   const [customizations, setCustomizations] = useState<any>({});
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -257,6 +258,7 @@ const Menu: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         setCustomizations({});
+        setSelectedAddOns([]);
         setQuantity(1);
         setSpecialInstructions('');
       }
@@ -369,6 +371,7 @@ const Menu: React.FC = () => {
 
     setSelectedItem(item);
     setCustomizations({});
+    setSelectedAddOns([]);
     setQuantity(1);
     setSpecialInstructions('');
   };
@@ -381,6 +384,7 @@ const Menu: React.FC = () => {
 
     setSelectedItem(null);
     setCustomizations({});
+    setSelectedAddOns([]);
     setQuantity(1);
     setSpecialInstructions('');
   };
@@ -410,12 +414,32 @@ const Menu: React.FC = () => {
     }));
   };
 
+  const handleAddOnToggle = (addOnName: string) => {
+    setSelectedAddOns((prev) => {
+      if (prev.includes(addOnName)) {
+        return prev.filter((name) => name !== addOnName);
+      } else {
+        return [...prev, addOnName];
+      }
+    });
+  };
+
   const calculateItemPrice = () => {
     if (!selectedItem) return 0;
 
     let total = selectedItem.price;
+
+    // Add customization prices
     Object.values(customizations).forEach((custom: any) => {
       total += custom.priceModifier;
+    });
+
+    // Add selected add-ons prices
+    selectedAddOns.forEach((addOnName) => {
+      const addOn = selectedItem.addOns?.find((a) => a.name === addOnName);
+      if (addOn) {
+        total += addOn.price;
+      }
     });
 
     return total;
@@ -445,12 +469,22 @@ const Menu: React.FC = () => {
       priceModifier: data.priceModifier,
     }));
 
+    // Map selected add-ons to cart format
+    const addOnsArray = selectedAddOns.map((addOnName) => {
+      const addOn = selectedItem.addOns?.find((a) => a.name === addOnName);
+      return {
+        name: addOnName,
+        price: addOn?.price || 0,
+      };
+    });
+
     const cartItem: CartItem = {
       menuItemId: selectedItem._id,
       name: selectedItem.name,
       price: itemPrice,
       quantity,
       customizations: customizationsArray,
+      addOns: addOnsArray.length > 0 ? addOnsArray : undefined,
       subtotal: itemPrice * quantity,
       specialInstructions: specialInstructions || undefined,
       image: selectedItem.image,
@@ -841,6 +875,8 @@ const Menu: React.FC = () => {
           setQuantity={setQuantity}
           customizations={customizations}
           onCustomizationChange={handleCustomizationChange}
+          selectedAddOns={selectedAddOns}
+          onAddOnToggle={handleAddOnToggle}
           specialInstructions={specialInstructions}
           setSpecialInstructions={setSpecialInstructions}
           calculatePrice={calculateItemPrice}
@@ -862,6 +898,8 @@ interface ItemModalProps {
   setQuantity: (q: number) => void;
   customizations: any;
   onCustomizationChange: (name: string, value: string | string[], priceModifier: number) => void;
+  selectedAddOns: string[];
+  onAddOnToggle: (addOnName: string) => void;
   specialInstructions: string;
   setSpecialInstructions: (s: string) => void;
   calculatePrice: () => number;
@@ -878,6 +916,8 @@ const ItemModal: React.FC<ItemModalProps> = ({
   setQuantity,
   customizations,
   onCustomizationChange,
+  selectedAddOns,
+  onAddOnToggle,
   specialInstructions,
   setSpecialInstructions,
   calculatePrice,
@@ -964,6 +1004,51 @@ const ItemModal: React.FC<ItemModalProps> = ({
                 onChange={onCustomizationChange}
               />
             ))}
+          </div>
+        )}
+
+        {/* Add-Ons Section */}
+        {item.addOns && item.addOns.length > 0 && (
+          <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-bold text-gray-900">Add-Ons</h3>
+            <div className="p-4 bg-white border-2 border-gray-200 rounded-lg">
+              <div className="space-y-3">
+                {item.addOns.map((addOn) => {
+                  const isSelected = selectedAddOns.includes(addOn.name);
+                  const isAvailable = addOn.isAvailable;
+
+                  return (
+                    <label
+                      key={addOn.name}
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                        !isAvailable
+                          ? 'bg-gray-100 opacity-50 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-indigo-50 border-2 border-indigo-500'
+                          : 'bg-gray-50 border-2 border-transparent hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => onAddOnToggle(addOn.name)}
+                          disabled={!isAvailable}
+                          className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <span className={`font-medium ${!isAvailable ? 'text-gray-400' : 'text-gray-900'}`}>
+                          {addOn.name}
+                          {!isAvailable && <span className="ml-2 text-xs">(Unavailable)</span>}
+                        </span>
+                      </div>
+                      <Badge variant="warning" size="sm">
+                        +${addOn.price.toFixed(2)}
+                      </Badge>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
