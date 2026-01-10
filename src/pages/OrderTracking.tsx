@@ -90,9 +90,12 @@ const OrderTracking: React.FC = () => {
   }, [orderId, fetchOrder]);
 
   // Setup Firebase Cloud Messaging notifications
-  const { requestPermission } = useNotifications(isAuthenticated, {
+  const { requestPermission, permissionStatus } = useNotifications(isAuthenticated, {
     onOrderUpdate: handleOrderUpdateFromNotification,
   });
+
+  const isNotificationsEnabled = permissionStatus === 'granted';
+  const isNotificationsBlocked = permissionStatus === 'denied';
 
   useEffect(() => {
     fetchOrder();
@@ -246,26 +249,77 @@ const OrderTracking: React.FC = () => {
           <BackButton to="/order-history" label="Back to Order History" />
         </div>
 
-        {/* FCM Status Indicator */}
+        {/* Notification Status Card */}
         <div className="mb-6">
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <CardBody className="py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Bell className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">
-                    Live Updates Enabled
-                  </span>
+          {isNotificationsEnabled ? (
+            // Notifications Enabled
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+              <CardBody className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Bell className="h-5 w-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-900">
+                      Live Updates Enabled
+                    </span>
+                  </div>
+                  <Badge variant="success" size="sm">
+                    Real-time
+                  </Badge>
                 </div>
-                <Badge variant="success" size="sm">
-                  Real-time
-                </Badge>
-              </div>
-              <p className="text-xs text-blue-700 mt-1">
-                You'll receive notifications when your order status changes
-              </p>
-            </CardBody>
-          </Card>
+                <p className="text-xs text-green-700 mt-1">
+                  You'll receive notifications when your order status changes
+                </p>
+              </CardBody>
+            </Card>
+          ) : isNotificationsBlocked ? (
+            // Notifications Blocked
+            <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
+              <CardBody className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-900">
+                      Notifications Blocked
+                    </span>
+                  </div>
+                  <Badge variant="danger" size="sm">
+                    Disabled
+                  </Badge>
+                </div>
+                <p className="text-xs text-red-700 mt-1">
+                  Please enable notifications in your browser settings to receive real-time order status updates
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
+            // Notifications Disabled (Default)
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardBody className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Bell className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm font-semibold text-blue-900">
+                        Enable Real-Time Order Updates
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      Get instant notifications when your order status changes - from preparing to ready for pickup!
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={requestPermission}
+                    className="ml-4 bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+                  >
+                    <Bell className="h-4 w-4 mr-1" />
+                    Enable
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
         </div>
 
         {/* Order Status Card */}
