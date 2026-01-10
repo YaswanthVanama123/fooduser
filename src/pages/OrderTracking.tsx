@@ -59,15 +59,17 @@ const OrderTracking: React.FC = () => {
       }
       setError(null);
 
+      console.log(`🔄 [OrderTracking] Fetching order ${orderId}...`);
       const response = await ordersApi.getById(orderId);
 
       if (response.success) {
+        console.log(`✅ [OrderTracking] Order ${orderId} fetched successfully. Status: ${response.data.status}`);
         setOrder(response.data);
       } else {
         setError('Order not found');
       }
     } catch (err: any) {
-      console.error('Error fetching order:', err);
+      console.error('❌ [OrderTracking] Error fetching order:', err);
       setError(err.response?.data?.message || 'Failed to load order');
       hasFetchedOrder.current = false; // Reset on error to allow retry
     } finally {
@@ -79,13 +81,19 @@ const OrderTracking: React.FC = () => {
 
   // Handle order update from FCM notification
   const handleOrderUpdateFromNotification = useCallback((notificationOrderId: string) => {
-    console.log('📡 FCM notification: Refreshing order', notificationOrderId);
+    console.log('📡 [OrderTracking] FCM notification received!');
+    console.log('   Notification Order ID:', notificationOrderId);
+    console.log('   Current Order ID:', orderId);
+    console.log('   Tab visible:', document.visibilityState === 'visible');
 
     if (notificationOrderId === orderId) {
+      console.log('✅ [OrderTracking] Order IDs match - refreshing order data...');
       // Reset guard to allow refetch
       hasFetchedOrder.current = false;
       // Fetch order without showing loading spinner
       fetchOrder(false);
+    } else {
+      console.log('⚠️ [OrderTracking] Order IDs do not match - skipping refresh');
     }
   }, [orderId, fetchOrder]);
 
@@ -99,6 +107,30 @@ const OrderTracking: React.FC = () => {
 
   useEffect(() => {
     fetchOrder();
+  }, [fetchOrder]);
+
+  // Refetch order when tab becomes visible (Page Visibility API)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [OrderTracking] Tab became visible - refreshing order...');
+        // Reset guard and refetch order without showing loading spinner
+        hasFetchedOrder.current = false;
+        fetchOrder(false);
+      } else {
+        console.log('🙈 [OrderTracking] Tab became hidden');
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    console.log('✅ [OrderTracking] Visibility change listener added');
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      console.log('🗑️ [OrderTracking] Visibility change listener removed');
+    };
   }, [fetchOrder]);
 
   const handleRetry = () => {
