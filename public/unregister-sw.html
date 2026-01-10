@@ -1,0 +1,56 @@
+<\!DOCTYPE html>
+<html>
+<head>
+  <title>Unregister Service Workers</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Service Worker Cleanup</h1>
+  <button onclick="unregisterAll()">🗑️ Unregister All Service Workers</button>
+  <button onclick="checkStatus()">🔍 Check Status</button>
+  <div id="logs"></div>
+
+  <script>
+    function log(msg) {
+      console.log(msg);
+      document.getElementById('logs').innerHTML += `<div class="log">${msg}</div>`;
+    }
+
+    async function unregisterAll() {
+      document.getElementById('logs').innerHTML = '';
+      log('Starting cleanup...');
+      
+      if (\!('serviceWorker' in navigator)) {
+        log('❌ Service workers not supported');
+        return;
+      }
+
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      log(`Found ${registrations.length} service worker(s)`);
+
+      for (let i = 0; i < registrations.length; i++) {
+        const reg = registrations[i];
+        log(`Unregistering SW ${i + 1}: ${reg.scope}`);
+        await reg.unregister();
+        log(`✅ Unregistered SW ${i + 1}`);
+      }
+
+      log('✅ All service workers unregistered\!');
+      log('📝 Now clear your browser cache and reload the page');
+    }
+
+    async function checkStatus() {
+      document.getElementById('logs').innerHTML = '';
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      log(`Found ${registrations.length} service worker registration(s)`);
+      registrations.forEach((reg, idx) => {
+        log(`SW ${idx + 1}: ${reg.scope} - ${reg.active?.state}`);
+      });
+    }
+  </script>
+</body>
+</html>

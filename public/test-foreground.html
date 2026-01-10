@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foreground Message Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+    .log { background: white; padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 4px solid #4CAF50; }
+    .log.error { border-left-color: #f44336; }
+    #logs { max-height: 500px; overflow-y: auto; }
+    button { padding: 10px 20px; margin: 10px 5px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>🔥 Foreground Message Test (NO Service Worker)</h1>
+  <p>This page tests foreground messages WITHOUT service worker interference</p>
+
+  <div>
+    <button onclick="initFirebase()">1. Initialize Firebase</button>
+    <button onclick="requestPermissionAndGetToken()">2. Get Token</button>
+  </div>
+
+  <div id="token-display" style="background: white; padding: 10px; margin: 10px 0; border-radius: 4px;"></div>
+
+  <h3>Console Logs:</h3>
+  <div id="logs"></div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
+
+    let app, messaging;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCzaxJmTsQc5R736KdVGAdk3Y5hlRyxH0w",
+      authDomain: "eatfood-7e70e.firebaseapp.com",
+      projectId: "eatfood-7e70e",
+      storageBucket: "eatfood-7e70e.firebasestorage.app",
+      messagingSenderId: "710370647048",
+      appId: "1:710370647048:web:86e5e4cd05e6607694c5bd",
+      measurementId: "G-4PZTF90GB2"
+    };
+
+    const vapidKey = "BKsWC7WGK64If-FjV9Xz6tbYXGLsCleET3hDefqY3dOMUcmfvmsA0hV86Bemf_PPM6ZMNKdmWtxlAAvSij6IARg";
+
+    function log(message, isError = false) {
+      console.log(message);
+      const logsDiv = document.getElementById('logs');
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log' + (isError ? ' error' : '');
+      logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+    }
+
+    window.initFirebase = function() {
+      try {
+        log('🔄 Initializing Firebase App...');
+        app = initializeApp(firebaseConfig);
+        messaging = getMessaging(app);
+        log('✅ Firebase initialized successfully');
+
+        // Setup onMessage listener
+        log('👂 Setting up onMessage listener...');
+        onMessage(messaging, (payload) => {
+          log('🔔🔔🔔 FOREGROUND MESSAGE RECEIVED! 🔔🔔🔔');
+          log('Payload: ' + JSON.stringify(payload, null, 2));
+
+          const notification = payload.notification;
+          const data = payload.data;
+
+          if (notification) {
+            log('📝 Notification: ' + notification.title);
+            alert(`📬 Notification Received!\n\nTitle: ${notification.title}\nBody: ${notification.body}`);
+          }
+
+          if (data) {
+            log('📝 Data: ' + JSON.stringify(data));
+          }
+        });
+        log('✅ onMessage listener registered!');
+
+      } catch (error) {
+        log('❌ Error: ' + error.message, true);
+      }
+    };
+
+    window.requestPermissionAndGetToken = async function() {
+      try {
+        log('🔔 Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        log('Permission result: ' + permission);
+
+        if (permission !== 'granted') {
+          log('❌ Permission denied', true);
+          return;
+        }
+
+        log('🎫 Getting FCM token...');
+
+        // Get token WITHOUT service worker
+        const token = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration: undefined // Don't use service worker
+        });
+
+        if (token) {
+          log('✅ Token obtained: ' + token.substring(0, 50) + '...');
+
+          document.getElementById('token-display').innerHTML = `
+            <strong>Your FCM Token:</strong><br>
+            <textarea style="width: 100%; height: 100px; font-size: 10px;">${token}</textarea>
+            <button onclick="navigator.clipboard.writeText('${token}')">📋 Copy Token</button>
+            <p style="color: #666;">Use this token to send test notifications from Firebase Console</p>
+          `;
+        } else {
+          log('❌ No token received', true);
+        }
+      } catch (error) {
+        log('❌ Error: ' + error.message, true);
+      }
+    };
+
+    // Auto-init on load
+    window.addEventListener('load', () => {
+      log('📄 Page loaded. Click "Initialize Firebase" to start.');
+    });
+  </script>
+</body>
+</html>

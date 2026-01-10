@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Heart, ShoppingBag, Trash2, Search } from 'lucide-react';
@@ -34,14 +34,18 @@ interface MenuItem {
 
 const Favorites: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useUser();
-  const { addItem } = useCart();
+  const { isAuthenticated } = useUser();
+  const { addToCart } = useCart();
   const { restaurant } = useRestaurant();
 
   const [favorites, setFavorites] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Prevent duplicate API calls (React Strict Mode)
+  const hasFetchedFavorites = useRef(false);
+  const isFetching = useRef(false);
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
@@ -51,11 +55,20 @@ const Favorites: React.FC = () => {
       navigate('/login?redirect=/favorites');
       return;
     }
+
+    // Prevent duplicate calls
+    if (hasFetchedFavorites.current || isFetching.current) return;
+
+    hasFetchedFavorites.current = true;
     fetchFavorites();
   }, [isAuthenticated]);
 
   const fetchFavorites = async () => {
+    // Prevent duplicate calls
+    if (isFetching.current) return;
+
     try {
+      isFetching.current = true;
       setIsLoading(true);
       const response = await favoritesApi.getFavorites();
 
@@ -66,8 +79,10 @@ const Favorites: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to fetch favorites:', error);
       toast.error('Failed to load favorites');
+      hasFetchedFavorites.current = false; // Reset on error to allow retry
     } finally {
       setIsLoading(false);
+      isFetching.current = false;
     }
   };
 
@@ -89,9 +104,13 @@ const Favorites: React.FC = () => {
   };
 
   const handleAddToCart = (item: MenuItem) => {
-    addItem({
-      menuItem: item,
+    addToCart({
+      menuItemId: item._id,
+      name: item.name,
+      price: item.price,
       quantity: 1,
+      customizations: [],
+      subtotal: item.price,
     });
     toast.success(
       <div className="flex items-center space-x-2">

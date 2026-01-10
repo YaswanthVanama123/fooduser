@@ -1,12 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, ClipboardList, Clock, Star, Settings } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
 import SimpleAuthModal from './SimpleAuthModal';
-import Badge from './ui/Badge';
-import authApi from '../api/auth.api';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -16,11 +14,34 @@ const Header: React.FC = () => {
   const { user, isAuthenticated, login, register, logout } = useUser();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [activeOrder, setActiveOrder] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Ref to prevent duplicate initial API calls (especially in React StrictMode)
-  const hasFetchedInitialOrder = useRef(false);
+  // Get active order from localStorage (updated by useHomeData hook)
+  const [activeOrder, setActiveOrder] = useState<any>(null);
+
+  // Check localStorage for active order (updated by useHomeData on home page)
+  useEffect(() => {
+    const checkActiveOrder = () => {
+      const homeData = localStorage.getItem('homePageData');
+      if (homeData) {
+        try {
+          const parsed = JSON.parse(homeData);
+          setActiveOrder(parsed.data?.activeOrder || null);
+        } catch (err) {
+          setActiveOrder(null);
+        }
+      } else {
+        setActiveOrder(null);
+      }
+    };
+
+    checkActiveOrder();
+
+    // Check periodically for updates (passive polling from localStorage)
+    const interval = setInterval(checkActiveOrder, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const isHomePage = location.pathname === '/';
@@ -30,48 +51,6 @@ const Header: React.FC = () => {
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
-
-  // Memoized function to fetch active order
-  const fetchActiveOrder = useCallback(async (skipGuard = false) => {
-    if (!isAuthenticated) {
-      setActiveOrder(null);
-      return;
-    }
-
-    // Skip guard check for periodic polling, but use it for initial mount
-    if (!skipGuard && hasFetchedInitialOrder.current) return;
-    if (!skipGuard) hasFetchedInitialOrder.current = true;
-
-    try {
-      const response = await authApi.getActiveOrder();
-      if (response.success && response.data) {
-        setActiveOrder(response.data);
-      } else {
-        setActiveOrder(null);
-      }
-    } catch (error) {
-      console.error('Failed to fetch active order:', error);
-      setActiveOrder(null);
-    }
-  }, [isAuthenticated]);
-
-  // Fetch active order when user is authenticated
-  useEffect(() => {
-    // Reset guard when authentication changes
-    hasFetchedInitialOrder.current = false;
-
-    // Initial fetch (with guard)
-    fetchActiveOrder(false);
-
-    // Periodic polling (skip guard for polling)
-    const interval = isAuthenticated ? setInterval(() => fetchActiveOrder(true), 30000) : null;
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isAuthenticated, fetchActiveOrder]);
-
-  // Get logo URL from branding (handle both object and string formats)
   const getLogoUrl = () => {
     const logo = restaurant?.branding?.logo;
     if (!logo) return null;

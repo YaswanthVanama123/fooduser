@@ -66,11 +66,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authApi.login({ username });
 
       if (response.success) {
-        const { customer, token } = response.data;
+        const { customer, accessToken, refreshToken } = response.data;
 
-        // Save user data and JWT token
+        // Save user data and JWT tokens
         localStorage.setItem('customer', JSON.stringify(customer));
-        localStorage.setItem('customerToken', token);
+        localStorage.setItem('customerToken', accessToken);
+        localStorage.setItem('customerRefreshToken', refreshToken);
         localStorage.setItem('customerId', customer._id);
         localStorage.setItem('customerUsername', customer.username);
 
@@ -90,11 +91,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authApi.register({ username });
 
       if (response.success) {
-        const { customer, token } = response.data;
+        const { customer, accessToken, refreshToken } = response.data;
 
-        // Save user data and JWT token
+        // Save user data and JWT tokens
         localStorage.setItem('customer', JSON.stringify(customer));
-        localStorage.setItem('customerToken', token);
+        localStorage.setItem('customerToken', accessToken);
+        localStorage.setItem('customerRefreshToken', refreshToken);
         localStorage.setItem('customerId', customer._id);
         localStorage.setItem('customerUsername', customer.username);
 
@@ -112,8 +114,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     localStorage.removeItem('customer');
     localStorage.removeItem('customerToken');
+    localStorage.removeItem('customerRefreshToken');
     localStorage.removeItem('customerId');
     localStorage.removeItem('customerUsername');
+    localStorage.removeItem('fcmToken'); // Clear FCM token on logout
     setUser(null);
   };
 

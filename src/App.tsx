@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from './context/CartContext';
-import { SocketProvider } from './context/SocketContext';
 import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
-import { UserProvider } from './context/UserContext';
+import { UserProvider, useUser } from './context/UserContext';
+import { useNotifications } from './hooks/useNotifications';
 import TableSelection from './pages/TableSelection';
 import Menu from './pages/Menu';
 import Cart from './pages/Cart';
@@ -23,6 +23,24 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 const AppContent: React.FC = () => {
   const { restaurant, loading, error, refreshRestaurant } = useRestaurant();
+  const { user } = useUser();
+
+  // Initialize Firebase Cloud Messaging notifications globally
+  // This ensures notifications work across all pages
+  useNotifications(!!user, {
+    onOrderUpdate: (orderId) => {
+      console.log('📦 Global notification: Order updated:', orderId);
+      // Order tracking page will handle the actual refresh via its own callback
+    },
+    onMenuUpdate: () => {
+      console.log('📋 Global notification: Menu updated');
+      // Could trigger menu refresh here if needed
+    },
+    onCartUpdate: () => {
+      console.log('🛒 Global notification: Cart updated');
+      // Could trigger cart refresh here if needed
+    },
+  });
 
   if (loading) {
     return <Loading message="Loading restaurant..." />;
@@ -114,33 +132,31 @@ const App: React.FC = () => {
       <BrowserRouter>
         <RestaurantProvider>
           <UserProvider>
-            <SocketProvider>
-              <CartProvider>
-                <AppContent />
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    duration: 3000,
-                    style: {
-                      background: '#363636',
-                      color: '#fff',
+            <CartProvider>
+              <AppContent />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
+                  },
+                  success: {
+                    iconTheme: {
+                      primary: '#10b981',
+                      secondary: '#fff',
                     },
-                    success: {
-                      iconTheme: {
-                        primary: '#10b981',
-                        secondary: '#fff',
-                      },
+                  },
+                  error: {
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
                     },
-                    error: {
-                      iconTheme: {
-                        primary: '#ef4444',
-                        secondary: '#fff',
-                      },
-                    },
-                  }}
-                />
-              </CartProvider>
-            </SocketProvider>
+                  },
+                }}
+              />
+            </CartProvider>
           </UserProvider>
         </RestaurantProvider>
       </BrowserRouter>

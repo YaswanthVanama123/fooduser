@@ -46,7 +46,6 @@ const Menu: React.FC = () => {
 
   // Favorites state
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [isFavoritesLoading, setIsFavoritesLoading] = useState(false);
 
   // Dietary type filter state - Initialize from URL
   const [dietaryFilters, setDietaryFilters] = useState(() => ({
@@ -66,6 +65,11 @@ const Menu: React.FC = () => {
 
   // Ref to prevent duplicate API calls (especially in React StrictMode)
   const hasFetchedData = useRef(false);
+  const isFetching = useRef(false);
+
+  // Cache configuration
+  const CACHE_KEY = 'menuPageData';
+  const CACHE_DURATION = 10 * 1000; // 10 seconds (matches backend cache)
 
   // Memoized filter function
   const filterItems = useCallback(() => {
@@ -108,22 +112,76 @@ const Menu: React.FC = () => {
     setFilteredItems(filtered);
   }, [menuItems, selectedCategory, searchQuery, dietaryFilters]);
 
-  // Memoized fetch function to prevent duplicate API calls
-  const fetchData = useCallback(async () => {
+  // Memoized fetch function with client-side caching
+  const fetchData = useCallback(async (skipCache = false) => {
     // Prevent duplicate calls
-    if (hasFetchedData.current) return;
-    hasFetchedData.current = true;
+    if (hasFetchedData.current || isFetching.current) return;
 
     try {
+      isFetching.current = true;
+      hasFetchedData.current = true;
+
+      // Check localStorage cache (10s TTL for real-time menu updates)
+      if (!skipCache) {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          try {
+            const parsedCache = JSON.parse(cached);
+            const cacheAge = Date.now() - parsedCache.timestamp;
+
+            if (cacheAge < CACHE_DURATION) {
+              console.log('[Menu] Using cached data (age:', Math.round(cacheAge / 1000), 's)');
+              setCategories(parsedCache.data.categories || []);
+              setMenuItems(parsedCache.data.menuItems || []);
+
+              // Set favorites from cache if available
+              if (parsedCache.data.favoriteIds) {
+                setFavoriteIds(new Set(parsedCache.data.favoriteIds));
+              }
+
+              setLoading(false);
+              isFetching.current = false;
+              return;
+            } else {
+              // Stale cache - show it while revalidating
+              console.log('[Menu] Cache stale, revalidating...');
+              setCategories(parsedCache.data.categories || []);
+              setMenuItems(parsedCache.data.menuItems || []);
+
+              // Set favorites from stale cache
+              if (parsedCache.data.favoriteIds) {
+                setFavoriteIds(new Set(parsedCache.data.favoriteIds));
+              }
+
+              setLoading(false);
+            }
+          } catch (err) {
+            localStorage.removeItem(CACHE_KEY);
+          }
+        }
+      }
+
       setLoading(true);
       setError(null);
 
-      // OPTIMIZED: Single API call returns both categories and menu items
+      // OPTIMIZED: Single API call returns categories, menu items, and favorites
       const response = await menuApi.getPageData(true); // true = available only
 
       if (response.success) {
         setCategories(response.data.categories || []);
         setMenuItems(response.data.menuItems || []);
+
+        // Set favorites from the combined response (if user is authenticated)
+        if (response.data.favoriteIds) {
+          setFavoriteIds(new Set(response.data.favoriteIds));
+        }
+
+        // Cache the response
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: response.data,
+          timestamp: Date.now(),
+        }));
+        console.log('[Menu] Data loaded and cached (favorites included)');
       }
     } catch (err: any) {
       console.error('Error fetching data:', err);
@@ -131,33 +189,11 @@ const Menu: React.FC = () => {
       hasFetchedData.current = false; // Reset on error to allow retry
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
-  }, []); // Empty deps - function doesn't depend on external values
+  }, [CACHE_KEY, CACHE_DURATION]); // Stable deps
 
-  // Fetch favorites if user is authenticated
-  const fetchFavorites = useCallback(async () => {
-    if (!isAuthenticated) return;
-
-    try {
-      setIsFavoritesLoading(true);
-      const response = await favoritesApi.getFavorites();
-
-      if (response.success) {
-        // Backend returns menu items directly, extract their IDs
-        const ids = response.data
-          .filter((item: any) => item && item._id)
-          .map((item: any) => item._id);
-        setFavoriteIds(new Set(ids));
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch favorites:', error);
-      // Don't show error toast - favorites are optional
-    } finally {
-      setIsFavoritesLoading(false);
-    }
-  }, [isAuthenticated]);
-
-  // Toggle favorite status for an item
+  // Toggle favorite status for an item (optimistic UI update)
   const handleToggleFavorite = async (itemId: string) => {
     if (!isAuthenticated) {
       toast.error('Please login to add favorites');
@@ -203,12 +239,12 @@ const Menu: React.FC = () => {
     fetchData();
   }, [tableId, navigate, fetchData]);
 
-  useEffect(() => {
-    // Fetch favorites when authenticated
-    if (isAuthenticated) {
-      fetchFavorites();
-    }
-  }, [isAuthenticated, fetchFavorites]);
+  // Remove separate favorites fetch - now included in page-data API
+  // useEffect(() => {
+  //   if (isAuthenticated && !hasFetchedFavorites.current) {
+  //     fetchFavorites();
+  //   }
+  // }, [isAuthenticated, fetchFavorites]);
 
   useEffect(() => {
     filterItems();

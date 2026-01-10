@@ -1,113 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   User,
-  Mail,
-  Phone,
-  Lock,
-  Save,
   LogOut,
   Heart,
   Clock,
   Settings,
-  Edit2,
-  X,
 } from 'lucide-react';
-import Card, { CardHeader, CardBody, CardFooter } from '../components/ui/Card';
+import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Badge from '../components/ui/Badge';
 import BackButton from '../components/ui/BackButton';
 import { useUser } from '../context/UserContext';
 import { useRestaurant } from '../context/RestaurantContext';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout, updateProfile, isLoading } = useUser();
+  const { user, logout, isLoading } = useUser();
   const { restaurant } = useRestaurant();
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-  });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phone: user.phone || '',
-      });
-    }
-  }, [user]);
-
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-
-    if (formData.phone && !/^\+?[\d\s-()]+$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number is invalid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      await updateProfile({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone || undefined,
-      });
-
-      toast.success('Profile updated successfully!', {
-        style: {
-          background: primaryColor,
-          color: '#fff',
-        },
-      });
-
-      setIsEditing(false);
-    } catch (error: any) {
-      console.error('Profile update error:', error);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phone: user.phone || '',
-      });
-    }
-    setErrors({});
-    setIsEditing(false);
-  };
 
   const handleLogout = async () => {
     try {
@@ -117,13 +30,6 @@ const Profile: React.FC = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
   };
 
   if (isLoading) {
@@ -191,143 +97,50 @@ const Profile: React.FC = () => {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Personal Information
-                  </h2>
-                  {!isEditing ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancel}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Cancel
-                    </Button>
-                  )}
-                </div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Personal Information
+                </h2>
               </CardHeader>
 
               <CardBody className="space-y-4">
-                {isEditing ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input
-                        type="text"
-                        name="firstName"
-                        label="First Name"
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        leftIcon={<User className="h-5 w-5" />}
-                        error={errors.firstName}
-                        required
-                      />
-
-                      <Input
-                        type="text"
-                        name="lastName"
-                        label="Last Name"
-                        value={formData.lastName}
-                        onChange={handleChange}
-                        leftIcon={<User className="h-5 w-5" />}
-                        error={errors.lastName}
-                        required
-                      />
+                <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex-shrink-0">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {user.username?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold text-gray-900">
+                      {user.username}
+                    </p>
+                    <p className="text-sm text-gray-600">Customer</p>
+                  </div>
+                </div>
 
-                    <Input
-                      type="email"
-                      name="email"
-                      label="Email Address"
-                      value={user.email}
-                      disabled
-                      leftIcon={<Mail className="h-5 w-5" />}
-                      helperText="Email cannot be changed"
-                    />
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <Clock className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Member Since</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {new Date(user.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
 
-                    <Input
-                      type="tel"
-                      name="phone"
-                      label="Phone Number"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      leftIcon={<Phone className="h-5 w-5" />}
-                      error={errors.phone}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
-                          style={{ backgroundColor: primaryColor }}
-                        >
-                          {user.firstName.charAt(0)}
-                          {user.lastName.charAt(0)}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="text-sm text-gray-600">{user.email}</p>
-                        {user.phone && (
-                          <p className="text-sm text-gray-600">{user.phone}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <Clock className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Member Since</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {new Date(user.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </p>
-                      </div>
-
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <Heart className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Favorites</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {user.preferences?.favoriteItems?.length || 0}
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <Heart className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Favorites</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {user.preferences?.favoriteItems?.length || 0}
+                    </p>
+                  </div>
+                </div>
               </CardBody>
-
-              {isEditing && (
-                <CardFooter>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    onClick={handleSave}
-                    isLoading={isSaving}
-                    style={{
-                      background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
-                    }}
-                  >
-                    <Save className="h-5 w-5 mr-2" />
-                    Save Changes
-                  </Button>
-                </CardFooter>
-              )}
             </Card>
 
             {/* Preferences Card */}

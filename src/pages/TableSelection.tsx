@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Users, MapPin, Armchair, Lightbulb, CheckCircle, Check, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { useRestaurant } from '../context/RestaurantContext';
-import { useSocket } from '../context/SocketContext';
 import { useUser } from '../context/UserContext';
-import { useTables } from '../hooks';
+import { useHomeData } from '../hooks';
 import { Table } from '../types';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
@@ -16,60 +14,38 @@ import Card, { CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import SimpleAuthModal from '../components/SimpleAuthModal';
-import authApi from '../api/auth.api';
 
 const TableSelection: React.FC = () => {
   const navigate = useNavigate();
   const { setTable } = useCart();
-  const { restaurant, loading: restaurantLoading, error: restaurantError } = useRestaurant();
-  const { connectToRestaurant } = useSocket();
   const { isAuthenticated, user, login, register } = useUser();
-  const { tables, loading, error, refetch } = useTables();
+
+  // OPTIMIZATION: Single hook that fetches restaurant, tables, and active order in one API call
+  const { restaurant, tables, activeOrder, loading, error, refetch } = useHomeData();
+
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-  const [activeOrder, setActiveOrder] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Ref to prevent duplicate API calls for active order
-  const hasFetchedActiveOrder = useRef(false);
+  // Ref to track if we've shown the active order notification
+  const hasShownActiveOrderNotification = useRef(false);
 
+  // Show notification when active order is loaded
   useEffect(() => {
-    if (restaurant) {
-      connectToRestaurant(restaurant._id);
+    if (activeOrder && !hasShownActiveOrderNotification.current && restaurant) {
+      hasShownActiveOrderNotification.current = true;
+      toast.success(`You have an active order at Table ${activeOrder.tableNumber}!`, {
+        style: {
+          background: restaurant?.branding?.primaryColor || '#6366f1',
+          color: '#fff',
+        },
+        duration: 5000,
+      });
     }
-  }, [restaurant]);
-
-  // Fetch active order when user is authenticated (with duplicate call prevention)
-  const fetchActiveOrder = useCallback(async () => {
-    // Prevent duplicate calls
-    if (hasFetchedActiveOrder.current || !isAuthenticated) return;
-    hasFetchedActiveOrder.current = true;
-
-    try {
-      const response = await authApi.getActiveOrder();
-      if (response.success && response.data) {
-        setActiveOrder(response.data);
-        // Show notification that user has an active order
-        toast.success(`You have an active order at Table ${response.data.tableNumber}!`, {
-          style: {
-            background: restaurant?.branding?.primaryColor || '#6366f1',
-            color: '#fff',
-          },
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch active order:', error);
-      hasFetchedActiveOrder.current = false; // Reset on error to allow retry
-    }
-  }, [isAuthenticated, restaurant]);
-
-  useEffect(() => {
-    fetchActiveOrder();
-  }, [fetchActiveOrder]);
+  }, [activeOrder, restaurant]);
 
   const handleTableSelect = (table: Table) => {
     // Check if user has an active order for this table
-    if (activeOrder && activeOrder.tableId._id === table._id) {
+    if (activeOrder && activeOrder.tableNumber === table.tableNumber) {
       // User has an active order for this table - take them to order tracking
       toast.success(`Viewing your order from Table ${table.tableNumber}!`, {
         style: {
@@ -104,9 +80,9 @@ const TableSelection: React.FC = () => {
     }, 800);
   };
 
-  if (restaurantLoading || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
         <SEO
           title="Select Table"
           description="Choose your table to start browsing our menu and placing your order"
@@ -175,19 +151,15 @@ const TableSelection: React.FC = () => {
     );
   }
 
-  if (restaurantError) {
-    return <ErrorMessage title="Restaurant Error" message={restaurantError} />;
-  }
-
   if (error) {
-    return <ErrorMessage title="Error Loading Tables" message={error} onRetry={refetch} />;
+    return <ErrorMessage title="Error Loading Home Page" message={error.message} onRetry={refetch} />;
   }
 
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 overflow-x-hidden">
       <SEO
         title="Select Table"
         description="Choose your table to start browsing our menu and placing your order"
@@ -352,7 +324,7 @@ const TableSelection: React.FC = () => {
           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {tables.map((table) => {
               // Check if this table has user's active order
-              const isUserTable = activeOrder && activeOrder.tableId._id === table._id;
+              const isUserTable = activeOrder && activeOrder.tableNumber === table.tableNumber;
               const isClickable = !table.isOccupied || isUserTable;
 
               return (
@@ -448,9 +420,7 @@ const TableSelection: React.FC = () => {
 
         {/* Help Section */}
         <div className="mt-12 sm:mt-16">
-          <Card className="max-w-3xl mx-auto bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 border-2 border-orange-200 shadow-2xl overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-200 to-red-200 rounded-full -mr-16 -mt-16 opacity-50" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br from-pink-200 to-orange-200 rounded-full -ml-12 -mb-12 opacity-50" />
+          <Card className="max-w-3xl mx-auto bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 border-2 border-orange-200 shadow-2xl overflow-hidden relative">
             <CardBody className="p-6 sm:p-8 relative z-10">
               <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="flex-shrink-0">

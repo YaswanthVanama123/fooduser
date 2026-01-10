@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FCM Test Page</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status.warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Firebase Cloud Messaging Test Page</h1>
+
+  <div class="section">
+    <h2>Service Worker Status</h2>
+    <div id="sw-status"></div>
+    <button onclick="checkServiceWorker()">🔄 Refresh Status</button>
+    <button onclick="unregisterServiceWorker()">🗑️ Unregister SW</button>
+    <button onclick="registerServiceWorker()">✅ Register SW</button>
+  </div>
+
+  <div class="section">
+    <h2>Notification Permission</h2>
+    <div id="permission-status"></div>
+    <button onclick="requestPermission()">🔔 Request Permission</button>
+  </div>
+
+  <div class="section">
+    <h2>FCM Token</h2>
+    <div id="token-status"></div>
+    <button onclick="getToken()">🎫 Get Token</button>
+  </div>
+
+  <div class="section">
+    <h2>Console Logs</h2>
+    <div id="logs" style="max-height: 300px; overflow-y: auto;"></div>
+    <button onclick="clearLogs()">🗑️ Clear Logs</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCzaxJmTsQc5R736KdVGAdk3Y5hlRyxH0w",
+      authDomain: "eatfood-7e70e.firebaseapp.com",
+      projectId: "eatfood-7e70e",
+      storageBucket: "eatfood-7e70e.firebasestorage.app",
+      messagingSenderId: "710370647048",
+      appId: "1:710370647048:web:86e5e4cd05e6607694c5bd",
+      measurementId: "G-4PZTF90GB2"
+    };
+
+    const vapidKey = "BKsWC7WGK64If-FjV9Xz6tbYXGLsCleET3hDefqY3dOMUcmfvmsA0hV86Bemf_PPM6ZMNKdmWtxlAAvSij6IARg";
+
+    let app, messaging;
+
+    function log(message, type = 'info') {
+      console.log(message);
+      const logsDiv = document.getElementById('logs');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.style.marginBottom = '5px';
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logsDiv.appendChild(logEntry);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+
+    window.clearLogs = function() {
+      document.getElementById('logs').innerHTML = '';
+    };
+
+    // Initialize Firebase
+    try {
+      app = initializeApp(firebaseConfig);
+      messaging = getMessaging(app);
+      log('✅ Firebase initialized successfully', 'success');
+
+      // Listen for foreground messages
+      onMessage(messaging, (payload) => {
+        log('📩 FOREGROUND MESSAGE RECEIVED!', 'success');
+        log(`Payload: ${JSON.stringify(payload, null, 2)}`);
+        alert('Message received! Check console and logs.');
+      });
+
+    } catch (error) {
+      log(`❌ Firebase init error: ${error.message}`, 'error');
+    }
+
+    window.checkServiceWorker = async function() {
+      const statusDiv = document.getElementById('sw-status');
+      statusDiv.innerHTML = '';
+
+      if (!('serviceWorker' in navigator)) {
+        statusDiv.innerHTML = '<div class="status error">❌ Service workers not supported in this browser</div>';
+        return;
+      }
+
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        log(`Found ${registrations.length} service worker registration(s)`);
+
+        if (registrations.length === 0) {
+          statusDiv.innerHTML = '<div class="status warning">⚠️ No service worker registered</div>';
+          return;
+        }
+
+        registrations.forEach((reg, idx) => {
+          const scope = reg.scope;
+          const active = reg.active?.state;
+          const installing = reg.installing?.state;
+          const waiting = reg.waiting?.state;
+
+          statusDiv.innerHTML += `
+            <div class="status ${active === 'activated' ? 'success' : 'warning'}">
+              <strong>Registration ${idx + 1}</strong><br>
+              Scope: ${scope}<br>
+              Active: ${active || 'none'}<br>
+              Installing: ${installing || 'none'}<br>
+              Waiting: ${waiting || 'none'}<br>
+              Script URL: ${reg.active?.scriptURL || 'N/A'}
+            </div>
+          `;
+
+          log(`SW ${idx + 1}: scope=${scope}, active=${active}`);
+        });
+
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+        log(`Error checking service worker: ${error.message}`, 'error');
+      }
+    };
+
+    window.unregisterServiceWorker = async function() {
+      if (!('serviceWorker' in navigator)) return;
+
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+          log(`✅ Unregistered service worker: ${reg.scope}`, 'success');
+        }
+        checkServiceWorker();
+      } catch (error) {
+        log(`❌ Error unregistering: ${error.message}`, 'error');
+      }
+    };
+
+    window.registerServiceWorker = async function() {
+      if (!('serviceWorker' in navigator)) {
+        log('❌ Service workers not supported', 'error');
+        return;
+      }
+
+      try {
+        log('🔄 Registering service worker...');
+        const registration = await navigator.serviceWorker.register(
+          '/firebase-messaging-sw.js',
+          { scope: '/' }
+        );
+        log(`✅ Service worker registered: ${registration.scope}`, 'success');
+
+        // Wait for activation
+        await navigator.serviceWorker.ready;
+        log('✅ Service worker activated', 'success');
+
+        checkServiceWorker();
+      } catch (error) {
+        log(`❌ Registration failed: ${error.message}`, 'error');
+      }
+    };
+
+    window.requestPermission = async function() {
+      const statusDiv = document.getElementById('permission-status');
+
+      if (!('Notification' in window)) {
+        statusDiv.innerHTML = '<div class="status error">❌ Notifications not supported</div>';
+        return;
+      }
+
+      try {
+        log('🔔 Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        log(`Permission result: ${permission}`);
+
+        statusDiv.innerHTML = `
+          <div class="status ${permission === 'granted' ? 'success' : 'error'}">
+            ${permission === 'granted' ? '✅' : '❌'} Permission: ${permission}
+          </div>
+        `;
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+        log(`❌ Error requesting permission: ${error.message}`, 'error');
+      }
+    };
+
+    window.getToken = async function() {
+      const statusDiv = document.getElementById('token-status');
+
+      if (!messaging) {
+        statusDiv.innerHTML = '<div class="status error">❌ Firebase not initialized</div>';
+        return;
+      }
+
+      try {
+        log('🎫 Getting FCM token...');
+
+        // Ensure service worker is registered
+        await registerServiceWorker();
+
+        const token = await getToken(messaging, { vapidKey });
+
+        if (token) {
+          log(`✅ Token obtained: ${token}`, 'success');
+          statusDiv.innerHTML = `
+            <div class="status success">
+              <strong>✅ Token Generated:</strong><br>
+              <pre style="font-size: 10px; word-break: break-all;">${token}</pre>
+              <button onclick="navigator.clipboard.writeText('${token}')">📋 Copy Token</button>
+            </div>
+          `;
+        } else {
+          log('❌ No token received', 'error');
+          statusDiv.innerHTML = '<div class="status error">❌ No token received</div>';
+        }
+      } catch (error) {
+        log(`❌ Error getting token: ${error.message}`, 'error');
+        statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+      }
+    };
+
+    // Auto-check on load
+    window.addEventListener('load', () => {
+      checkServiceWorker();
+
+      const currentPermission = Notification.permission;
+      document.getElementById('permission-status').innerHTML = `
+        <div class="status ${currentPermission === 'granted' ? 'success' : 'warning'}">
+          ${currentPermission === 'granted' ? '✅' : '⚠️'} Current permission: ${currentPermission}
+        </div>
+      `;
+
+      log('🚀 Test page loaded');
+    });
+  </script>
+</body>
+</html>

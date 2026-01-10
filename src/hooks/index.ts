@@ -9,3 +9,4 @@ export { useTables } from './useTables';
 export { useOrder } from './useOrder';
 export { usePlaceOrder } from './usePlaceOrder';
 export { useDebounce } from './useDebounce';
+export { useHomeData } from './useHomeData';
