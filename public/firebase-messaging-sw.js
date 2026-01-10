@@ -155,27 +155,55 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Handle push events (alternative to onBackgroundMessage)
+// Handle push events (alternative to onBackgroundMessage) and show notifications sent from Firebase Console
 self.addEventListener('push', (event) => {
   console.log('[firebase-messaging-sw.js] Push event received:', event);
 
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      console.log('[SW] Push data (JSON):', data);
+  if (!event.data) {
+    return;
+  }
 
-      // Handle the push data
-      // This is an alternative entry point if onBackgroundMessage doesn't fire
-    } catch (jsonError) {
-      // If JSON parsing fails, try to get text
-      try {
-        const text = event.data.text();
-        console.log('[SW] Push data (Text):', text);
-      } catch (textError) {
-        console.log('[SW] Could not parse push data as JSON or text');
-      }
+  let payload;
+  try {
+    payload = event.data.json();
+    console.log('[SW] Push data (JSON):', payload);
+  } catch (jsonError) {
+    try {
+      const text = event.data.text();
+      console.log('[SW] Push data (Text):', text);
+      payload = { notification: { title: 'Notification', body: text } };
+    } catch (textError) {
+      console.log('[SW] Could not parse push data as JSON or text');
+      payload = { notification: { title: 'Notification', body: 'You have a new message' } };
     }
   }
+
+  const notificationData = payload.data || {};
+  const notificationPayload = payload.notification || {};
+  const notificationTitle = notificationPayload.title || notificationData.title || 'Notification';
+  const notificationBody = notificationPayload.body || notificationData.body || 'You have a new update';
+  const clickAction = notificationData.clickAction || notificationPayload.click_action || '/';
+  const notificationTag = notificationData.tag || notificationPayload.tag || notificationData.orderId || 'default';
+
+  const notificationOptions = {
+    body: notificationBody,
+    icon: '/logo.png',
+    badge: '/badge.png',
+    tag: notificationTag,
+    requireInteraction: true,
+    data: {
+      url: clickAction,
+      ...notificationData,
+      ...notificationPayload,
+    },
+  };
+
+  console.log('[SW] Showing push notification from Firebase Campaign:', {
+    title: notificationTitle,
+    options: notificationOptions,
+  });
+
+  event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
 });
 
 // Install event
