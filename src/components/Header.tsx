@@ -4,7 +4,7 @@ import { ShoppingCart, Home, ArrowLeft, Menu as MenuIcon, User, LogOut, Clipboar
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
-import SimpleAuthModal from './SimpleAuthModal';
+import LoginOnlyModal from './LoginOnlyModal';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -279,12 +279,11 @@ const Header: React.FC = () => {
       )}
     </header>
 
-      {/* Simple Auth Modal - Rendered outside header for proper z-index */}
-      <SimpleAuthModal
+      {/* Login Only Modal - Rendered outside header for proper z-index */}
+      <LoginOnlyModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onLogin={login}
-        onRegister={register}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
@@ -6,6 +6,8 @@ import { CartProvider } from './context/CartContext';
 import { RestaurantProvider, useRestaurant } from './context/RestaurantContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { useNotifications } from './hooks/useNotifications';
+import InvalidUrlError from './components/InvalidUrlError';
+import { extractSubdomain } from './utils/subdomain';
 import TableSelection from './pages/TableSelection';
 import Menu from './pages/Menu';
 import Cart from './pages/Cart';
@@ -127,6 +129,23 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const [urlError, setUrlError] = useState<Error | null>(null);
+
+  // Validate subdomain on app load
+  useEffect(() => {
+    try {
+      extractSubdomain(); // Will throw if URL has "admin" prefix
+    } catch (error) {
+      console.error('Invalid URL detected:', error);
+      setUrlError(error as Error);
+    }
+  }, []);
+
+  // Show error page if URL is invalid
+  if (urlError) {
+    return <InvalidUrlError error={urlError} />;
+  }
+
   return (
     <HelmetProvider>
       <BrowserRouter>

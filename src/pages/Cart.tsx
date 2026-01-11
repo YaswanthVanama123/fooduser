@@ -54,15 +54,18 @@ const Cart: React.FC = () => {
 
     // Check if user is authenticated
     if (!isAuthenticated) {
-      toast.error('Please login to place your order', {
-        icon: '🔒',
-        duration: 3000,
-      });
+      // Show auth modal to register or login before placing order
       setShowAuthModal(true);
       return;
     }
 
-    // Show confirmation modal
+    // Show confirmation modal for authenticated users
+    setShowConfirmOrderModal(true);
+  };
+
+  const handleAuthSuccess = () => {
+    // After successful login/register, close auth modal and show order confirmation
+    setShowAuthModal(false);
     setShowConfirmOrderModal(true);
   };
 
@@ -73,7 +76,7 @@ const Cart: React.FC = () => {
       setIsPlacingOrder(true);
 
       // Prepare order data
-      const orderData = {
+      const orderData: any = {
         tableId,
         items: cart.map((item) => ({
           menuItemId: item.menuItemId,
@@ -88,6 +91,7 @@ const Cart: React.FC = () => {
       };
 
       console.log('Placing order for user:', user?.username);
+
       const response = await ordersApi.create(orderData);
 
       if (response.success) {
@@ -388,10 +392,10 @@ const Cart: React.FC = () => {
                 <CardFooter>
                   {/* Authentication Notice - Show when not logged in */}
                   {!isAuthenticated && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800 font-medium flex items-center">
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800 font-medium flex items-center">
                         <Lock className="h-4 w-4 mr-2" />
-                        Please login to place your order
+                        Login or register to place your order
                       </p>
                     </div>
                   )}
@@ -416,25 +420,13 @@ const Cart: React.FC = () => {
                       background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
                     }}
                   >
-                    {isAuthenticated ? (
-                      <>
-                        <Package className="h-5 w-5 mr-2" />
-                        {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-5 w-5 mr-2" />
-                        Login to Place Order
-                      </>
-                    )}
+                    <Package className="h-5 w-5 mr-2" />
+                    {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
                   </Button>
 
                   <p className="text-xs text-gray-500 text-center mt-3 flex items-center justify-center">
                     <Lock className="h-3 w-3 mr-1" />
-                    {isAuthenticated
-                      ? 'Your order will be sent to the kitchen immediately'
-                      : 'Login required to place orders'
-                    }
+                    Your order will be sent to the kitchen immediately
                   </p>
                 </CardFooter>
               </Card>
@@ -456,12 +448,18 @@ const Cart: React.FC = () => {
         </div>
       </div>
 
-      {/* Simple Auth Modal */}
+      {/* Auth Modal - Register or Login during order placement */}
       <SimpleAuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onLogin={login}
-        onRegister={register}
+        onLogin={async (username: string) => {
+          await login(username);
+          handleAuthSuccess();
+        }}
+        onRegister={async (username: string) => {
+          await register(username);
+          handleAuthSuccess();
+        }}
       />
 
       {/* Clear Cart Confirmation Modal */}

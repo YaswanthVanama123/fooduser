@@ -1,6 +1,7 @@
 /**
  * Subdomain Detection Utility
  * Extracts restaurant subdomain from hostname for multi-tenant routing
+ * REJECTS "admin" prefix for security
  */
 
 export interface SubdomainInfo {
@@ -10,10 +11,12 @@ export interface SubdomainInfo {
 
 /**
  * Extract subdomain from current hostname
+ * User app should NOT have "admin" prefix
  * Examples:
- *   - pizzahut.patlinks.com → pizzahut
- *   - pizzahut.localhost:5173 → pizzahut
- *   - localhost:5173 → null
+ *   - pizzahut.patlinks.com → pizzahut ✅
+ *   - pizzahut.localhost:5174 → pizzahut ✅
+ *   - admin.pizzahut.localhost:5174 → ERROR ❌
+ *   - localhost:5174 → null
  */
 export const extractSubdomain = (): SubdomainInfo => {
   const hostname = window.location.hostname;
@@ -21,6 +24,12 @@ export const extractSubdomain = (): SubdomainInfo => {
 
   // Check if local development
   const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
+
+  // SECURITY: Reject "admin" prefix
+  if (parts[0] === 'admin') {
+    console.error('⚠️ User app accessed with "admin" prefix:', hostname);
+    throw new Error('Invalid URL: User app should not have "admin" prefix. Use admin.{restaurant}.localhost:5175 for admin app.');
+  }
 
   // For local development: subdomain.localhost or just localhost
   if (isLocal) {
@@ -38,7 +47,7 @@ export const extractSubdomain = (): SubdomainInfo => {
     return { subdomain: null, isLocal: true };
   }
 
-  // Production: subdomain.domain.com
+  // Production: subdomain.domain.com (but not admin.subdomain.domain.com)
   if (parts.length >= 3) {
     return { subdomain: parts[0], isLocal: false };
   }

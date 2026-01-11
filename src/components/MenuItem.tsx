@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Wheat, Clock, Star, Sparkles, Plus, Minus, ShoppingCart, Heart } from 'lucide-react';
+import { Leaf, Wheat, Clock, Star, Sparkles, Plus, Minus, ShoppingCart, Heart, Drumstick } from 'lucide-react';
 import { MenuItem as MenuItemType } from '../types';
 import { useRestaurant } from '../context/RestaurantContext';
 import Card from './ui/Card';
@@ -113,6 +113,11 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick, onQuickAdd, cartQuan
 
         {/* Dietary Badges */}
         <div className="absolute top-2 sm:top-3 right-2 sm:right-3 flex flex-col space-y-2">
+          {item.isNonVeg && (
+            <div className="bg-red-500 text-white p-1 rounded-full transition-transform" title="Non-Vegetarian">
+              <Drumstick className="h-3.5 w-3.5" />
+            </div>
+          )}
           {item.isVegetarian && (
             <div className="bg-green-500 text-white p-1 rounded-full transition-transform" title="Vegetarian">
               <Leaf className="h-3.5 w-3.5" />

@@ -13,7 +13,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import Card, { CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import SimpleAuthModal from '../components/SimpleAuthModal';
+import LoginOnlyModal from '../components/LoginOnlyModal';
 
 const TableSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -457,12 +457,11 @@ const TableSelection: React.FC = () => {
         </div>
       </div>
 
-      {/* Simple Auth Modal */}
-      <SimpleAuthModal
+      {/* Login Only Modal */}
+      <LoginOnlyModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onLogin={login}
-        onRegister={register}
       />
     </div>
   );
