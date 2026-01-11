@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 /**
  * Home Page API
- * Combined endpoint that returns restaurant info, tables, and active order
+ * Combined endpoint that returns restaurant info, tables, and active orders
  * This reduces 3 separate API calls into 1 for faster page load
  */
 export const homeApi = {
@@ -11,7 +11,7 @@ export const homeApi = {
    * Returns:
    * - Restaurant information
    * - Tables list
-   * - Active order (if authenticated)
+   * - Active orders array (if authenticated) - supports multiple orders
    */
   getData: async () => {
     const response = await apiClient.get('/home');

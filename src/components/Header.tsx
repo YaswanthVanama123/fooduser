@@ -16,29 +16,29 @@ const Header: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get active order from localStorage (updated by useHomeData hook)
-  const [activeOrder, setActiveOrder] = useState<any>(null);
+  // Get active orders from localStorage (updated by useHomeData hook)
+  const [activeOrders, setActiveOrders] = useState<any[]>([]);
 
-  // Check localStorage for active order (updated by useHomeData on home page)
+  // Check localStorage for active orders (updated by useHomeData on home page)
   useEffect(() => {
-    const checkActiveOrder = () => {
+    const checkActiveOrders = () => {
       const homeData = localStorage.getItem('homePageData');
       if (homeData) {
         try {
           const parsed = JSON.parse(homeData);
-          setActiveOrder(parsed.data?.activeOrder || null);
+          setActiveOrders(parsed.data?.activeOrders || []);
         } catch (err) {
-          setActiveOrder(null);
+          setActiveOrders([]);
         }
       } else {
-        setActiveOrder(null);
+        setActiveOrders([]);
       }
     };
 
-    checkActiveOrder();
+    checkActiveOrders();
 
     // Check periodically for updates (passive polling from localStorage)
-    const interval = setInterval(checkActiveOrder, 5000); // Check every 5 seconds
+    const interval = setInterval(checkActiveOrders, 5000); // Check every 5 seconds
 
     return () => clearInterval(interval);
   }, [isAuthenticated]);
@@ -163,14 +163,29 @@ const Header: React.FC = () => {
               </button>
             )}
 
-            {/* Track Order Button - Show when user has active order and not already on tracking page */}
-            {isAuthenticated && activeOrder && !isOrderTrackingPage && (
+            {/* Track Orders Button - Show when user has active orders and not already on tracking page */}
+            {isAuthenticated && activeOrders && activeOrders.length > 0 && !isOrderTrackingPage && (
               <button
-                onClick={() => navigate(`/order/${activeOrder._id}`)}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium"
+                onClick={() => {
+                  // If only one order, navigate directly to it
+                  if (activeOrders.length === 1) {
+                    navigate(`/order/${activeOrders[0]._id}`);
+                  } else {
+                    // If multiple orders, navigate to home page where they can see all orders
+                    navigate('/');
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition-all text-white font-medium relative"
               >
                 <ClipboardList className="h-5 w-5" />
-                <span className="hidden sm:inline">Track Order</span>
+                <span className="hidden sm:inline">
+                  {activeOrders.length === 1 ? 'Track Order' : `${activeOrders.length} Active Orders`}
+                </span>
+                {activeOrders.length > 1 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {activeOrders.length}
+                  </span>
+                )}
               </button>
             )}
 

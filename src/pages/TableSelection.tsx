@@ -20,20 +20,25 @@ const TableSelection: React.FC = () => {
   const { setTable } = useCart();
   const { isAuthenticated, user, login, register } = useUser();
 
-  // OPTIMIZATION: Single hook that fetches restaurant, tables, and active order in one API call
-  const { restaurant, tables, activeOrder, loading, error, refetch } = useHomeData();
+  // OPTIMIZATION: Single hook that fetches restaurant, tables, and active orders in one API call
+  const { restaurant, tables, activeOrders, loading, error, refetch } = useHomeData();
 
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Ref to track if we've shown the active order notification
-  const hasShownActiveOrderNotification = useRef(false);
+  // Ref to track if we've shown the active orders notification
+  const hasShownActiveOrdersNotification = useRef(false);
 
-  // Show notification when active order is loaded
+  // Show notification when active orders are loaded
   useEffect(() => {
-    if (activeOrder && !hasShownActiveOrderNotification.current && restaurant) {
-      hasShownActiveOrderNotification.current = true;
-      toast.success(`You have an active order at Table ${activeOrder.tableNumber}!`, {
+    if (activeOrders && activeOrders.length > 0 && !hasShownActiveOrdersNotification.current && restaurant) {
+      hasShownActiveOrdersNotification.current = true;
+      const count = activeOrders.length;
+      const message = count === 1
+        ? `You have an active order at Table ${activeOrders[0].tableNumber}!`
+        : `You have ${count} active orders!`;
+
+      toast.success(message, {
         style: {
           background: restaurant?.branding?.primaryColor || '#6366f1',
           color: '#fff',
@@ -41,11 +46,13 @@ const TableSelection: React.FC = () => {
         duration: 5000,
       });
     }
-  }, [activeOrder, restaurant]);
+  }, [activeOrders, restaurant]);
 
   const handleTableSelect = (table: Table) => {
     // Check if user has an active order for this table
-    if (activeOrder && activeOrder.tableNumber === table.tableNumber) {
+    const orderForThisTable = activeOrders?.find((order: any) => order.tableNumber === table.tableNumber);
+
+    if (orderForThisTable) {
       // User has an active order for this table - take them to order tracking
       toast.success(`Viewing your order from Table ${table.tableNumber}!`, {
         style: {
@@ -53,7 +60,7 @@ const TableSelection: React.FC = () => {
           color: '#fff',
         },
       });
-      navigate(`/order/${activeOrder._id}`);
+      navigate(`/order/${orderForThisTable._id}`);
       return;
     }
 
@@ -240,22 +247,50 @@ const TableSelection: React.FC = () => {
               </div>
             )}
 
-            {/* Active Order Info - Show when authenticated and has order */}
-            {isAuthenticated && activeOrder && (
-              <div className="mt-6 relative z-50 px-4">
-                <button
-                  onClick={() => navigate(`/order/${activeOrder._id}`)}
-                  className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold hover:from-green-500 hover:to-emerald-600 transition-all shadow-lg hover:shadow-2xl hover:scale-105 animate-pulse cursor-pointer text-sm sm:text-base"
-                  type="button"
-                >
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>View Your Active Order (Table {activeOrder.tableNumber})</span>
-                </button>
+            {/* Active Orders Info - Show when authenticated and has orders */}
+            {isAuthenticated && activeOrders && activeOrders.length > 0 && (
+              <div className="mt-6 relative z-50 px-4 w-full max-w-2xl mx-auto">
+                <div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-2xl border-2 border-white border-opacity-30 p-4 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-white" />
+                      <span className="text-white font-semibold text-lg">
+                        Your Active {activeOrders.length === 1 ? 'Order' : 'Orders'}
+                      </span>
+                    </div>
+                    <Badge variant="primary" size="sm" className="bg-white text-gray-900">
+                      {activeOrders.length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {activeOrders.map((order: any) => (
+                      <button
+                        key={order._id}
+                        onClick={() => navigate(`/order/${order._id}`)}
+                        className="w-full bg-white bg-opacity-90 hover:bg-opacity-100 rounded-xl p-3 transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-gradient-to-br from-green-400 to-emerald-500 text-white px-2 py-1 rounded-lg font-semibold text-xs">
+                            #{order.orderNumber}
+                          </div>
+                          <div className="text-left">
+                            <p className="font-semibold text-gray-900 text-sm">Table {order.tableNumber}</p>
+                            <p className="text-xs text-gray-600 capitalize">{order.status}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-gray-900 text-sm">${order.total.toFixed(2)}</span>
+                          <Check className="h-4 w-4 text-green-600 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Logged In Info - Show when authenticated but no active order */}
-            {isAuthenticated && !activeOrder && (
+            {/* Logged In Info - Show when authenticated but no active orders */}
+            {isAuthenticated && (!activeOrders || activeOrders.length === 0) && (
               <div className="mt-6 relative z-50 px-4">
                 <div className="inline-flex items-center space-x-2 bg-white bg-opacity-20 backdrop-blur-lg px-4 sm:px-6 py-3 rounded-xl border-2 border-white border-opacity-30">
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
@@ -324,7 +359,7 @@ const TableSelection: React.FC = () => {
           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {tables.map((table) => {
               // Check if this table has user's active order
-              const isUserTable = activeOrder && activeOrder.tableNumber === table.tableNumber;
+              const isUserTable = activeOrders?.some((order: any) => order.tableNumber === table.tableNumber);
               const isClickable = !table.isOccupied || isUserTable;
 
               return (

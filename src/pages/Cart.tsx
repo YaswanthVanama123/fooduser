@@ -12,6 +12,7 @@ import TextArea from '../components/ui/TextArea';
 import Badge from '../components/ui/Badge';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import SimpleAuthModal from '../components/SimpleAuthModal';
+import TipSelection from '../components/TipSelection';
 import { useCart } from '../context/CartContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useUser } from '../context/UserContext';
@@ -25,12 +26,14 @@ const Cart: React.FC = () => {
   const { restaurant } = useRestaurant();
   const { isAuthenticated, user, login, register } = useUser();
   const [orderNotes, setOrderNotes] = useState('');
+  const [tipAmount, setTipAmount] = useState(0);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showClearCartModal, setShowClearCartModal] = useState(false);
   const [showConfirmOrderModal, setShowConfirmOrderModal] = useState(false);
 
-  const { subtotal, tax, total } = getCartTotal();
+  const { subtotal, tax, total: cartTotal } = getCartTotal();
+  const total = cartTotal + tipAmount;
   const primaryColor = restaurant?.branding?.primaryColor || '#6366f1';
   const secondaryColor = restaurant?.branding?.secondaryColor || '#8b5cf6';
 
@@ -88,6 +91,7 @@ const Cart: React.FC = () => {
           specialInstructions: item.specialInstructions,
         })),
         notes: orderNotes || undefined,
+        tip: tipAmount,
       };
 
       console.log('Placing order for user:', user?.username);
@@ -376,6 +380,12 @@ const Cart: React.FC = () => {
                         <span>Tax (8%)</span>
                         <span className="font-semibold">${tax.toFixed(2)}</span>
                       </div>
+                      {tipAmount > 0 && (
+                        <div className="flex justify-between text-gray-700">
+                          <span>Tip</span>
+                          <span className="font-semibold">${tipAmount.toFixed(2)}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="border-t border-gray-300 mt-4 pt-4">
@@ -386,6 +396,16 @@ const Cart: React.FC = () => {
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Tip Selection */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <TipSelection
+                      subtotal={subtotal}
+                      selectedTip={tipAmount}
+                      onTipChange={setTipAmount}
+                      primaryColor={primaryColor}
+                    />
                   </div>
                 </CardBody>
 

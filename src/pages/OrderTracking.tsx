@@ -488,6 +488,12 @@ const OrderTracking: React.FC = () => {
                 <span>Tax</span>
                 <span className="font-semibold">{formatPrice(order.tax)}</span>
               </div>
+              {order.tip && order.tip > 0 && (
+                <div className="flex justify-between text-gray-700">
+                  <span>Tip</span>
+                  <span className="font-semibold">{formatPrice(order.tip)}</span>
+                </div>
+              )}
               <div className="border-t border-gray-300 pt-2 flex justify-between items-center">
                 <span className="text-lg font-bold text-gray-900">Total</span>
                 <span

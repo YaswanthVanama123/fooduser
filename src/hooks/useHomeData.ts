@@ -4,7 +4,7 @@ import homeApi from '../api/home.api';
 interface HomeData {
   restaurant: any;
   tables: any[];
-  activeOrder: any;
+  activeOrders: any[];
 }
 
 const CACHE_KEY = 'homePageData';
@@ -12,13 +12,14 @@ const CACHE_DURATION = 10 * 1000; // 10 seconds (matches backend cache for real-
 
 /**
  * Custom hook for fetching home page data
- * Combines restaurant info, tables list, and active order in a single API call
+ * Combines restaurant info, tables list, and active orders in a single API call
  *
  * OPTIMIZATIONS:
  * - Single API call instead of 4
  * - Light client-side caching (10s for real-time table availability)
  * - Stale-while-revalidate for instant loads
  * - Duplicate call prevention
+ * - Supports multiple active orders per customer
  */
 export const useHomeData = () => {
   const [data, setData] = useState<HomeData | null>(null);
@@ -97,7 +98,7 @@ export const useHomeData = () => {
   return {
     restaurant: data?.restaurant,
     tables: data?.tables || [],
-    activeOrder: data?.activeOrder,
+    activeOrders: data?.activeOrders || [],
     loading,
     error,
     refetch: () => fetchData(true),
